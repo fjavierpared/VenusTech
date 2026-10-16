@@ -7,7 +7,7 @@ dist/
 .DS_Store
 
 # Base de datos y archivos subidos (no van al repositorio)
-data/
+/data/
 
 # Llave de cifrado en el servidor (nunca al repositorio)
-secretos/
+/secretos/

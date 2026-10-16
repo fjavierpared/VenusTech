@@ -33,13 +33,13 @@ Todo vive en la carpeta `data/` (`venustech.db` + `uploads/`). **Respáldala**: 
 
 **Correo (avisos de mensajes y recuperación):** ya configurado con Gmail. La contraseña de aplicación está **cifrada** en `.env` (`SMTP_PASS_ENC`); la llave para descifrarla está fuera del proyecto, en `~/.config/venustech/clave`. Para cambiarla: `npm run secreto:guardar -- SMTP_PASS`. **Respalda esa llave**: sin ella no se puede leer la clave (bastaría con volver a guardarla).
 
-Variables de entorno: `DATA_DIR` (carpeta de datos, por defecto `./data`), `TRUST_PROXY=1` (detrás de Nginx), `PORT` y `HOST`.
+Variables de entorno: `SITE_URL` (dirección pública), `DATA_DIR` (carpeta de datos, por defecto `./data`), `TRUST_PROXY=1` (detrás de Nginx), `PORT` y `HOST`.
 
 ## Dónde editar
 
 | Qué | Archivo |
 |---|---|
-| Teléfono, correo, Instagram, dominio, RIF | `src/data/site.ts` |
+| Teléfono, correo, Instagram, RIF | `src/data/site.ts` |
 | Textos de servicios, FAQ y equipos | `src/data/servicios.ts` |
 | Proyectos (un `.md` por caso) | `src/content/proyectos/` |
 | Colores y tipografías | `src/styles/global.css` (`@theme`) |
@@ -48,8 +48,7 @@ Variables de entorno: `DATA_DIR` (carpeta de datos, por defecto `./data`), `TRUS
 
 Para agregar un proyecto, copia uno de los `.md` de `src/content/proyectos/` y cambia sus datos.
 
-## Pendientes antes del lanzamiento
+## Publicar en el VPS
 
-- [ ] Dominio definitivo en `src/data/site.ts`, `astro.config.mjs` y `public/robots.txt`
-- [ ] En el VPS: copiar `.env` y la llave (`~/.config/venustech/clave` o `VT_KEY_FILE`)
-- [ ] Dominio definitivo también en `security.allowedDomains` (`astro.config.mjs`)
+Guía completa paso a paso: [`deploy/DESPLIEGUE.md`](deploy/DESPLIEGUE.md).
+El dominio se define en una sola variable, `SITE_URL` (en `.env`).

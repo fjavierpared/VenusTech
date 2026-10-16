@@ -11,3 +11,6 @@ dist/
 
 # Llave de cifrado en el servidor (nunca al repositorio)
 /secretos/
+
+# Ajustes propios de cada servidor
+docker-compose.override.yml

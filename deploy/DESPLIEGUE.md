@@ -80,6 +80,10 @@ docker compose exec web node --disable-warning=ExperimentalWarning scripts/crear
 
 ## 5. Nginx + HTTPS
 
+> **¿Tu Nginx corre en Docker** (otro contenedor ocupa los puertos 80/443)? Usa la sección
+> [Nginx en Docker](#nginx-en-docker) de abajo en lugar de esta.
+
+
 ```bash
 sudo cp deploy/nginx-venustech.conf /etc/nginx/sites-available/venustech
 sudo sed -i 's/TU_DOMINIO/tu-dominio.com/' /etc/nginx/sites-available/venustech
@@ -117,3 +121,32 @@ crontab -e
 1. Apunta el dominio a la IP del VPS (registro `A`).
 2. Cambia `SITE_URL` en `.env` y `server_name` en `/etc/nginx/sites-available/venustech`.
 3. `docker compose up -d --build`, `sudo certbot --nginx -d tudominio.com`.
+
+## Nginx en Docker
+
+Si ya tienes un contenedor Nginx publicando los puertos 80/443 (por ejemplo `nginx`, con su configuración en
+`~/docker/nginx/conf.d` y certbot en `~/docker/nginx/certbot`), **no expongas el puerto 4321**: une la web a la
+red de ese contenedor.
+
+```bash
+cd ~/VenusTech
+bash scripts/conectar-proxy.sh nginx        # crea docker-compose.override.yml
+docker compose up -d --build
+
+D=~/docker/nginx; H=tu-dominio             # ej.: 161-97-83-13.sslip.io
+# 1) HTTP temporal para validar el dominio
+sed "s/TU_DOMINIO/$H/g" deploy/nginx-docker-http.conf > $D/conf.d/venustech.conf
+docker exec nginx nginx -t && docker exec nginx nginx -s reload
+# 2) Certificado gratuito
+docker run --rm -v $D/certbot/conf:/etc/letsencrypt -v $D/certbot/www:/var/www/certbot certbot/certbot \
+  certonly --webroot -w /var/www/certbot -d $H -m venustech47@gmail.com --agree-tos --no-eff-email
+# 3) Configuración definitiva con HTTPS
+sed "s/TU_DOMINIO/$H/g" deploy/nginx-docker.conf > $D/conf.d/venustech.conf
+docker exec nginx nginx -t && docker exec nginx nginx -s reload
+```
+
+Renovación automática del certificado (agrégalo con `crontab -e`):
+
+```
+0 4 * * 1 docker run --rm -v $HOME/docker/nginx/certbot/conf:/etc/letsencrypt -v $HOME/docker/nginx/certbot/www:/var/www/certbot certbot/certbot renew --quiet && docker exec nginx nginx -s reload
+```

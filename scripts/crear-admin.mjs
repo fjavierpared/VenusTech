@@ -12,7 +12,10 @@ const dbPath = path.join(DATA_DIR, 'venustech.db');
 mkdirSync(DATA_DIR, { recursive: true });
 
 if (!existsSync(dbPath)) {
-  console.error('No existe la base de datos todavía. Inicia la web una vez (npm run dev o npm start) y vuelve a ejecutar.');
+  console.error(
+    `No existe la base de datos en ${dbPath}.\n` +
+      'Abre la web una vez (por ejemplo /blog) para que se cree. Si ya lo hiciste, revisa los permisos de la carpeta data/ (PUID/PGID en .env).',
+  );
   process.exit(1);
 }
 

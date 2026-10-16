@@ -1,8 +1,10 @@
 ---
+import { Image } from 'astro:assets';
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import PageHero from '../../components/PageHero.astro';
+import Icon from '../../components/Icon.astro';
 import CtaFinal from '../../components/CtaFinal.astro';
-import { fechaLarga, publicadaPorSlug, renderMarkdown } from '../../lib/publicaciones';
+import foto from '../../assets/fotos/francisco.jpg';
+import { fechaLarga, minutosLectura, otrasPublicadas, publicadaPorSlug, renderMarkdown } from '../../lib/publicaciones';
 import { SITE } from '../../data/site';
 
 export const prerender = false;
@@ -12,11 +14,16 @@ if (!post) return new Response(null, { status: 404 });
 
 const html = renderMarkdown(post.contenido);
 const path = `/blog/${post.slug}`;
+const urlCompleta = new URL(path, SITE.url).href;
 const migas = [
   { name: 'Blog', path: '/blog' },
   { name: post.titulo, path },
 ];
 const descripcion = post.resumen || `${post.titulo}. Publicado por VenusTech en ${SITE.city}, Venezuela.`;
+const minutos = minutosLectura(post.contenido);
+const otras = otrasPublicadas(post.slug);
+const iso = (ts: number) => new Date(ts).toISOString();
+const compartirWa = `https://wa.me/?text=${encodeURIComponent(`${post.titulo} ${urlCompleta}`)}`;
 Astro.response.headers.set('Cache-Control', 'public, max-age=60');
 
 const articulo = {
@@ -24,10 +31,10 @@ const articulo = {
   '@type': 'BlogPosting',
   headline: post.titulo,
   description: descripcion,
-  url: new URL(path, SITE.url).href,
-  mainEntityOfPage: new URL(path, SITE.url).href,
-  datePublished: new Date(post.publicado_en!).toISOString(),
-  dateModified: new Date(post.actualizado_en).toISOString(),
+  url: urlCompleta,
+  mainEntityOfPage: urlCompleta,
+  datePublished: iso(post.publicado_en!),
+  dateModified: iso(post.actualizado_en),
   author: { '@id': `${SITE.url}/#francisco` },
   publisher: { '@id': `${SITE.url}/#negocio` },
   inLanguage: 'es-VE',
@@ -36,22 +43,121 @@ const articulo = {
 ---
 
 <BaseLayout title={post.titulo} description={descripcion} image={post.portada ?? undefined} breadcrumbs={migas} schema={[articulo]}>
-  <PageHero titulo={post.titulo} migas={migas}>
-    <p class="mt-5 text-white/70">
-      Por Ing. {SITE.owner} ·{' '}
-      <time datetime={new Date(post.publicado_en!).toISOString()}>{fechaLarga(post.publicado_en!)}</time>
-    </p>
-  </PageHero>
+  <article class="bg-white">
+    <!-- Encabezado editorial -->
+    <header class="container-vt max-w-4xl pt-10 text-center sm:pt-16">
+      <nav aria-label="Ruta de navegación" class="text-sm text-gris">
+        <a href="/" class="hover:text-navy-700">Inicio</a> <span aria-hidden="true" class="mx-1.5">/</span>
+        <a href="/blog" class="hover:text-navy-700">Blog</a>
+      </nav>
+      <p class="mt-8 font-display text-xs font-bold tracking-[0.25em] text-naranja-600 uppercase">Revista VenusTech</p>
+      <h1 class="mt-4 font-display text-4xl leading-[1.08] font-extrabold text-navy-900 sm:text-5xl lg:text-6xl">
+        {post.titulo}
+      </h1>
+      {
+        post.resumen && (
+          <p class="mx-auto mt-6 max-w-2xl font-serif text-xl leading-relaxed text-gris italic sm:text-2xl">{post.resumen}</p>
+        )
+      }
+      <div class="mt-8 flex items-center justify-center gap-3 border-y border-navy-900/10 py-4 text-left text-sm">
+        <Image src={foto} alt={SITE.owner} width={88} height={88} class="h-11 w-11 rounded-full object-cover" />
+        <div>
+          <p class="font-semibold text-navy-900">Por {SITE.owner}</p>
+          <p class="text-gris">
+            <time datetime={iso(post.publicado_en!)}>{fechaLarga(post.publicado_en!)}</time> · {minutos} min de lectura
+          </p>
+        </div>
+      </div>
+    </header>
 
-  <article class="bg-white py-12 sm:py-16">
-    <div class="container-vt max-w-3xl">
-      {post.portada && <img src={post.portada} alt="" class="mb-10 w-full rounded-3xl" />}
-      <div class="prose-vt" set:html={html} />
-      <p class="mt-12 border-t border-slate-200 pt-6">
-        <a href="/blog" class="font-semibold text-navy-700 hover:text-naranja">← Más publicaciones</a>
-      </p>
+    {
+      post.portada && (
+        <div class="container-vt mt-10 max-w-5xl">
+          <img src={post.portada} alt="" class="aspect-[16/9] w-full rounded-xl object-cover" />
+        </div>
+      )
+    }
+
+    <div class="container-vt max-w-[44rem] py-12 sm:py-16">
+      <div class="prose-revista" set:html={html} />
+
+      <!-- Fin del artículo -->
+      <div class="mt-14 flex flex-wrap items-center justify-between gap-4 border-y-2 border-navy-900 py-5">
+        <span class="font-display text-xs font-bold tracking-[0.2em] text-navy-900 uppercase">Comparte este artículo</span>
+        <div class="flex gap-2">
+          <a href={compartirWa} target="_blank" rel="noopener" class="btn-whatsapp px-4! py-2! text-sm!">
+            <Icon name="whatsapp" size={18} /> WhatsApp
+          </a>
+          <button type="button" id="copiar-enlace" data-url={urlCompleta} class="btn-outline-dark px-4! py-2! text-sm!">
+            Copiar enlace
+          </button>
+        </div>
+      </div>
+
+      <aside class="mt-10 flex flex-col gap-5 rounded-xl bg-crema/70 p-6 sm:flex-row sm:items-center">
+        <Image src={foto} alt="" width={160} height={160} class="h-20 w-20 shrink-0 rounded-full object-cover" />
+        <div>
+          <p class="font-display text-lg font-bold text-navy-900">{SITE.owner}</p>
+          <p class="mt-1 font-serif text-lg leading-snug text-gris">
+            Fundador de VenusTech en {SITE.city}. Diseño páginas web y sistemas, doy soporte técnico, administro servidores e
+            instalo cámaras de seguridad.
+          </p>
+          <a href="/sobre-venustech" class="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-navy-700 hover:text-naranja">
+            Conóceme <Icon name="arrow-right" size={16} />
+          </a>
+        </div>
+      </aside>
     </div>
   </article>
 
+  {
+    otras.length > 0 && (
+      <section class="border-t-4 border-navy-900 bg-white pb-16">
+        <div class="container-vt pt-6">
+          <h2 class="font-display text-sm font-bold tracking-[0.25em] text-navy-900 uppercase">Sigue leyendo</h2>
+          <div class="mt-8 grid gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
+            {otras.map((p) => (
+              <article class="group relative">
+                <div class="aspect-[3/2] overflow-hidden rounded-lg bg-navy-900">
+                  {p.portada ? (
+                    <img src={p.portada} alt="" loading="lazy" class="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]" />
+                  ) : (
+                    <div class="flex h-full items-center justify-center text-ambar">
+                      <Icon name="file-text" size={36} />
+                    </div>
+                  )}
+                </div>
+                <time class="mt-4 block font-display text-xs font-bold tracking-[0.18em] text-naranja-600 uppercase" datetime={iso(p.publicado_en!)}>
+                  {fechaLarga(p.publicado_en!)}
+                </time>
+                <h3 class="mt-1 font-display text-xl leading-snug font-bold text-navy-900">
+                  <a href={`/blog/${p.slug}`} class="after:absolute after:inset-0 group-hover:text-navy-700">
+                    {p.titulo}
+                  </a>
+                </h3>
+              </article>
+            ))}
+          </div>
+          <a href="/blog" class="mt-10 inline-flex items-center gap-2 font-semibold text-navy-700 hover:text-naranja">
+            Ver todas las publicaciones <Icon name="arrow-right" size={18} />
+          </a>
+        </div>
+      </section>
+    )
+  }
+
   <CtaFinal />
 </BaseLayout>
+
+<script>
+  const boton = document.getElementById('copiar-enlace');
+  boton?.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(boton.dataset.url ?? location.href);
+      boton.textContent = '¡Enlace copiado!';
+    } catch {
+      boton.textContent = 'No se pudo copiar';
+    }
+    setTimeout(() => (boton.textContent = 'Copiar enlace'), 2000);
+  });
+</script>

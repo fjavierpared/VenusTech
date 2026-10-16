@@ -25,7 +25,12 @@ export function slugify(texto: string) {
 }
 
 export function renderMarkdown(md: string) {
-  return marked.parse(md, { async: false, gfm: true, breaks: true }) as string;
+  const html = marked.parse(md, { async: false, gfm: true, breaks: true }) as string;
+  // Una imagen sola en su párrafo se muestra como foto de revista, con su descripción como pie
+  return html.replace(/<p><img src="([^"]+)" alt="([^"]*)"(?: title="[^"]*")?\s*\/?><\/p>/g, (_, src, alt) => {
+    const pie = alt && alt !== 'Descripción de la imagen' ? `<figcaption>${alt}</figcaption>` : '';
+    return `<figure><img src="${src}" alt="${alt}" loading="lazy">${pie}</figure>`;
+  });
 }
 
 export function publicadas(limite = 50) {
@@ -91,4 +96,15 @@ export function eliminar(id: number) {
 
 export function fechaLarga(ts: number) {
   return new Intl.DateTimeFormat('es-VE', { day: 'numeric', month: 'long', year: 'numeric' }).format(ts);
+}
+
+export function minutosLectura(md: string) {
+  const palabras = md.replace(/<[^>]+>|[#*_>`[\]()!-]/g, ' ').split(/\s+/).filter(Boolean).length;
+  return Math.max(1, Math.round(palabras / 200));
+}
+
+export function otrasPublicadas(slug: string, limite = 3) {
+  return db
+    .prepare("SELECT * FROM publicaciones WHERE estado = 'publicado' AND slug != ? ORDER BY publicado_en DESC LIMIT ?")
+    .all(slug, limite) as unknown as Publicacion[];
 }

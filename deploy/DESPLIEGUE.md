@@ -65,8 +65,9 @@ En el VPS, ajusta la dirección pública y los permisos:
 ```bash
 cd ~/VenusTech
 nano .env                          # cambia SITE_URL=https://tu-dominio (o el de sslip.io)
+# El contenedor corre con tu usuario, para poder escribir en data/:
+grep -q '^PUID=' .env || printf 'PUID=%s\nPGID=%s\n' "$(id -u)" "$(id -g)" >> .env
 chmod 600 .env secretos/clave
-sudo chown -R 1000:1000 data secretos   # el contenedor corre con el usuario 1000
 ```
 
 ## 4. Levantar la web

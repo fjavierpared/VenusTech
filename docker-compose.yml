@@ -7,6 +7,8 @@ services:
     image: venustech-web
     container_name: venustech-web
     restart: unless-stopped
+    # Corre con tu usuario del VPS (PUID/PGID en .env = `id -u` / `id -g`), así puede escribir en ./data
+    user: '${PUID:-1000}:${PGID:-1000}'
     env_file: .env
     # Solo accesible desde el propio VPS: Nginx es quien la publica a internet
     ports:

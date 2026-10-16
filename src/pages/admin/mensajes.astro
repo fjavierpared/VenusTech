@@ -1,0 +1,113 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import Icon from '../../components/Icon.astro';
+import { db } from '../../lib/db';
+
+export const prerender = false;
+
+interface Mensaje {
+  id: number;
+  ts: number;
+  nombre: string;
+  empresa: string | null;
+  telefono: string | null;
+  servicio: string;
+  mensaje: string;
+  estado: 'nuevo' | 'leido' | 'archivado';
+}
+
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  const id = Number(form.get('id'));
+  const accion = String(form.get('accion'));
+  if (accion === 'eliminar') db.prepare('DELETE FROM mensajes WHERE id = ?').run(id);
+  else if (['nuevo', 'leido', 'archivado'].includes(accion)) db.prepare('UPDATE mensajes SET estado = ? WHERE id = ?').run(accion, id);
+  return Astro.redirect(`/admin/mensajes${Astro.url.search}`);
+}
+
+const FILTROS = { activos: "estado != 'archivado'", archivados: "estado = 'archivado'" } as const;
+const filtro = Astro.url.searchParams.get('ver') === 'archivados' ? 'archivados' : 'activos';
+const mensajes = db
+  .prepare(`SELECT * FROM mensajes WHERE ${FILTROS[filtro]} ORDER BY estado = 'nuevo' DESC, ts DESC LIMIT 200`)
+  .all() as unknown as Mensaje[];
+
+const fecha = (ts: number) =>
+  new Intl.DateTimeFormat('es-VE', { dateStyle: 'medium', timeStyle: 'short' }).format(ts);
+
+// 0414-1234567 → 584141234567
+function waDe(tel: string | null) {
+  if (!tel) return null;
+  let d = tel.replace(/\D/g, '');
+  if (d.startsWith('0')) d = `58${d.slice(1)}`;
+  return d.length >= 10 ? d : null;
+}
+---
+
+<AdminLayout titulo="Mensajes">
+  <div slot="acciones" class="flex rounded-full border border-slate-300 bg-white p-0.5 text-sm">
+    <a href="/admin/mensajes" class:list={['rounded-full px-3 py-1', filtro === 'activos' ? 'bg-navy-900 text-white' : 'text-gris']}>Bandeja</a>
+    <a href="/admin/mensajes?ver=archivados" class:list={['rounded-full px-3 py-1', filtro === 'archivados' ? 'bg-navy-900 text-white' : 'text-gris']}>Archivados</a>
+  </div>
+
+  {
+    mensajes.length === 0 ? (
+      <div class="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center text-gris">
+        <Icon name="mail" size={32} class="mx-auto text-slate-400" />
+        <p class="mt-3">No hay mensajes aquí. Las consultas del formulario de contacto aparecerán en esta bandeja.</p>
+      </div>
+    ) : (
+      <ul class="space-y-3">
+        {mensajes.map((m) => {
+          const wa = waDe(m.telefono);
+          return (
+            <li class:list={['rounded-2xl border bg-white p-5', m.estado === 'nuevo' ? 'border-naranja/60 shadow-sm' : 'border-slate-200']}>
+              <div class="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p class="flex items-center gap-2 font-semibold text-navy-900">
+                    {m.estado === 'nuevo' && <span class="rounded-full bg-naranja px-2 py-0.5 text-xs font-bold text-white">Nuevo</span>}
+                    {m.nombre}
+                    {m.empresa && <span class="font-normal text-gris">· {m.empresa}</span>}
+                  </p>
+                  <p class="mt-0.5 text-sm text-gris">
+                    {m.servicio} · {fecha(m.ts)}
+                    {m.telefono && <> · {m.telefono}</>}
+                  </p>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                  {wa && (
+                    <a
+                      href={`https://wa.me/${wa}?text=${encodeURIComponent(`Hola ${m.nombre}, te escribo de VenusTech por tu consulta en la web.`)}`}
+                      target="_blank"
+                      rel="noopener"
+                      class="inline-flex items-center gap-1.5 rounded-full bg-[#25D366] px-3 py-1.5 text-sm font-semibold text-[#073b1d]"
+                    >
+                      <Icon name="whatsapp" size={16} /> Responder
+                    </a>
+                  )}
+                  <form method="post" class="flex gap-2">
+                    <input type="hidden" name="id" value={m.id} />
+                    {m.estado === 'nuevo' && <button name="accion" value="leido" class="rounded-full border border-slate-300 px-3 py-1.5 text-sm">Marcar leído</button>}
+                    {m.estado !== 'archivado' ? (
+                      <button name="accion" value="archivado" class="rounded-full border border-slate-300 px-3 py-1.5 text-sm">Archivar</button>
+                    ) : (
+                      <button name="accion" value="leido" class="rounded-full border border-slate-300 px-3 py-1.5 text-sm">Restaurar</button>
+                    )}
+                    <button
+                      name="accion"
+                      value="eliminar"
+                      class="rounded-full border border-red-200 px-3 py-1.5 text-sm text-red-700"
+                      onclick="return confirm('¿Eliminar este mensaje definitivamente?')"
+                    >
+                      Eliminar
+                    </button>
+                  </form>
+                </div>
+              </div>
+              <p class="mt-4 whitespace-pre-line text-tinta">{m.mensaje}</p>
+            </li>
+          );
+        })}
+      </ul>
+    )
+  }
+</AdminLayout>

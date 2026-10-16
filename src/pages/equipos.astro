@@ -1,0 +1,93 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PageHero from '../components/PageHero.astro';
+import SectionHeader from '../components/SectionHeader.astro';
+import Icon from '../components/Icon.astro';
+import Faq from '../components/Faq.astro';
+import CtaFinal from '../components/CtaFinal.astro';
+import { EQUIPOS } from '../data/servicios';
+import { SITE, waLink } from '../data/site';
+import { faqSchema, serviceSchema } from '../lib/schema';
+
+const migas = [{ name: 'Venta de equipos', path: '/equipos' }];
+const descripcion =
+  'Venta de PC, laptops, discos, memoria RAM, UPS, routers, impresoras y cámaras en Mérida, Venezuela, con asesoría de un ingeniero de sistemas.';
+
+const faqs = [
+  {
+    q: '¿Cómo sé qué equipo me conviene?',
+    a: 'Cuéntame para qué lo vas a usar (oficina, diseño, AutoCAD o Revit, estudios, punto de venta) y tu presupuesto. Te recomiendo la mejor opción sin venderte de más.',
+  },
+  {
+    q: '¿Instalan y configuran el equipo?',
+    a: 'Sí. Puedo entregarte el equipo con el sistema operativo y los programas instalados, y configurarlo en tu red.',
+  },
+  {
+    q: '¿Cómo consulto precios y disponibilidad?',
+    a: 'Escríbeme por WhatsApp con el equipo que buscas y te respondo con opciones, precio y disponibilidad actualizados.',
+  },
+];
+---
+
+<BaseLayout
+  title={`Venta de equipos de computación en ${SITE.city}`}
+  description={descripcion}
+  breadcrumbs={migas}
+  schema={[serviceSchema({ name: 'Venta de equipos de computación', description: descripcion, path: '/equipos' }), faqSchema(faqs)]}
+>
+  <PageHero
+    banda="Venta de equipos"
+    titulo="El equipo correcto para lo que necesitas, no el más caro"
+    texto="Vendo equipos de computación, redes y seguridad, y te asesoro como ingeniero para que tu compra rinda de verdad."
+    migas={migas}
+  >
+    <a
+      href={waLink('Hola, vengo de la web de VenusTech. Quiero consultar disponibilidad de un equipo.')}
+      class="btn-primary mt-9"
+      target="_blank"
+      rel="noopener"
+    >
+      <Icon name="whatsapp" size={20} /> Consultar disponibilidad
+    </a>
+  </PageHero>
+
+  <section class="bg-white py-20">
+    <div class="container-vt">
+      <SectionHeader banda="Catálogo" titulo="Lo que puedo conseguirte" texto="Pregunta por modelos, precios y disponibilidad actualizados." />
+      <ul class="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        {
+          EQUIPOS.map((e) => (
+            <li class="reveal rounded-3xl border border-navy-700/10 bg-crema/50 p-6">
+              <span class="flex size-12 items-center justify-center rounded-2xl bg-navy-900 text-ambar">
+                <Icon name={e.icon} size={24} />
+              </span>
+              <h2 class="mt-4 text-lg font-bold text-navy-900">{e.nombre}</h2>
+              <p class="mt-1.5 text-gris">{e.texto}</p>
+              <a
+                href={waLink(`Hola, vengo de la web de VenusTech. Quiero información sobre: ${e.nombre}.`)}
+                class="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-navy-700 hover:text-naranja"
+                target="_blank"
+                rel="noopener"
+              >
+                Preguntar <Icon name="arrow-right" size={16} />
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </section>
+
+  <section class="bg-slate-50 py-20">
+    <div class="container-vt grid gap-10 lg:grid-cols-[0.8fr_1.2fr]">
+      <SectionHeader banda="Preguntas" titulo="Antes de comprar" />
+      <Faq faqs={faqs} />
+    </div>
+  </section>
+
+  <CtaFinal
+    titulo="¿No sabes qué equipo comprar?"
+    texto="Cuéntame para qué lo necesitas y te recomiendo la mejor opción para tu presupuesto."
+    waMensaje="Hola, vengo de la web de VenusTech. Necesito asesoría para comprar un equipo."
+  />
+</BaseLayout>

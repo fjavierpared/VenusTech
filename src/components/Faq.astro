@@ -1,0 +1,25 @@
+---
+// Preguntas frecuentes. La página debe agregar el schema FAQPage con faqSchema().
+import Icon from './Icon.astro';
+
+interface Props {
+  faqs: { q: string; a: string }[];
+}
+const { faqs } = Astro.props;
+---
+
+<div class="divide-y divide-navy-700/10 rounded-3xl border border-navy-700/10 bg-white">
+  {
+    faqs.map((f) => (
+      <details class="group px-5 py-1 sm:px-7" name="faq">
+        <summary class="flex cursor-pointer list-none items-center justify-between gap-4 py-4 font-display text-lg font-semibold text-navy-900 [&::-webkit-details-marker]:hidden">
+          {f.q}
+          <span class="flex size-8 shrink-0 items-center justify-center rounded-full bg-crema text-naranja transition group-open:rotate-45">
+            <Icon name="x" size={16} strokeWidth={2.5} class="rotate-45" />
+          </span>
+        </summary>
+        <p class="pb-5 leading-relaxed text-gris">{f.a}</p>
+      </details>
+    ))
+  }
+</div>

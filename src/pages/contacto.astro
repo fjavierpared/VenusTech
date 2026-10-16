@@ -1,0 +1,196 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PageHero from '../components/PageHero.astro';
+import Icon from '../components/Icon.astro';
+import { SITE, instagramUrl, waLink } from '../data/site';
+
+const migas = [{ name: 'Contacto', path: '/contacto' }];
+
+const opciones = [
+  { id: 'web', label: 'Página web o sistema a medida' },
+  { id: 'soporte', label: 'Soporte técnico / servidores / redes' },
+  { id: 'datos', label: 'Recuperación de información' },
+  { id: 'camaras', label: 'Cámaras de seguridad' },
+  { id: 'equipos', label: 'Compra de equipos' },
+  { id: 'otro', label: 'Otra consulta' },
+];
+
+const contactoPage = {
+  '@context': 'https://schema.org',
+  '@type': 'ContactPage',
+  name: 'Contacto VenusTech',
+  url: new URL('/contacto', SITE.url).href,
+  about: { '@id': `${SITE.url}/#negocio` },
+};
+---
+
+<BaseLayout
+  title={`Contacto: cotiza tu proyecto en ${SITE.city}`}
+  description={`Contacta a VenusTech en Mérida, Venezuela, por WhatsApp (${SITE.phoneDisplay}), Instagram o formulario. Cotiza tu página web, soporte técnico o cámaras de seguridad.`}
+  breadcrumbs={migas}
+  schema={[contactoPage]}
+>
+  <PageHero
+    banda="Contacto"
+    titulo="Hablemos de tu proyecto"
+    texto={`Cuéntame qué necesitas y te respondo con una propuesta clara. ${SITE.responseTime}`}
+    migas={migas}
+  />
+
+  <section class="bg-slate-50 py-16 sm:py-20">
+    <div class="container-vt grid gap-8 lg:grid-cols-[1fr_1.3fr]">
+      <!-- Canales directos -->
+      <div class="space-y-4">
+        <a
+          href={waLink()}
+          target="_blank"
+          rel="noopener"
+          class="flex items-center gap-4 rounded-3xl bg-[#25D366] p-6 text-[#073b1d] shadow-sm transition hover:brightness-105"
+        >
+          <Icon name="whatsapp" size={36} strokeWidth={1.75} />
+          <span>
+            <span class="block text-sm font-medium">WhatsApp (la vía más rápida)</span>
+            <span class="block font-display text-2xl font-bold">{SITE.phoneDisplay}</span>
+          </span>
+        </a>
+        <a href={instagramUrl} target="_blank" rel="noopener" class="flex items-center gap-4 rounded-3xl border border-navy-700/10 bg-white p-6 transition hover:border-naranja">
+          <Icon name="instagram" size={32} class="text-naranja" />
+          <span>
+            <span class="block text-sm text-gris">Instagram</span>
+            <span class="block font-display text-xl font-bold text-navy-900">@{SITE.instagram}</span>
+          </span>
+        </a>
+        {
+          SITE.email && (
+            <a href={`mailto:${SITE.email}`} class="flex items-center gap-4 rounded-3xl border border-navy-700/10 bg-white p-6 transition hover:border-naranja">
+              <Icon name="mail" size={32} class="text-naranja" />
+              <span>
+                <span class="block text-sm text-gris">Correo</span>
+                <span class="block font-display text-xl font-bold break-all text-navy-900">{SITE.email}</span>
+              </span>
+            </a>
+          )
+        }
+        <div class="rounded-3xl bg-navy-900 p-6 text-white">
+          <p class="flex items-center gap-3 font-semibold"><Icon name="map-pin" class="text-ambar" /> {SITE.city}, {SITE.country}</p>
+          <p class="mt-3 text-sm leading-relaxed text-white/70">
+            Atención presencial en {SITE.city}. Desarrollo web, servidores y soporte remoto para toda Venezuela y el
+            exterior.
+          </p>
+        </div>
+      </div>
+
+      <!-- Formulario -->
+      <form id="formulario" data-wa={SITE.whatsapp} class="scroll-mt-28 rounded-[2rem] border border-navy-700/10 bg-white p-6 shadow-sm sm:p-9" novalidate>
+        <h2 class="text-2xl font-bold text-navy-900">Envíame tu consulta</h2>
+        <p class="mt-2 text-sm text-gris">Al enviar, se abrirá WhatsApp con tu mensaje listo para mandar.</p>
+
+        <div class="mt-7 grid gap-5 sm:grid-cols-2">
+          <label class="block">
+            <span class="text-sm font-semibold text-navy-900">Nombre *</span>
+            <input
+              name="nombre"
+              required
+              autocomplete="name"
+              class="mt-1.5 w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-navy-700 focus:ring-2 focus:ring-navy-700/20"
+            />
+          </label>
+          <label class="block">
+            <span class="text-sm font-semibold text-navy-900">Empresa o negocio</span>
+            <input
+              name="empresa"
+              autocomplete="organization"
+              class="mt-1.5 w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-navy-700 focus:ring-2 focus:ring-navy-700/20"
+            />
+          </label>
+          <label class="block sm:col-span-2">
+            <span class="text-sm font-semibold text-navy-900">Teléfono o WhatsApp</span>
+            <input
+              name="telefono"
+              type="tel"
+              autocomplete="tel"
+              placeholder="0414-000 0000"
+              class="mt-1.5 w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-navy-700 focus:ring-2 focus:ring-navy-700/20"
+            />
+          </label>
+          <label class="hidden" aria-hidden="true">
+            No llenar este campo
+            <input name="sitio_web" tabindex="-1" autocomplete="off" />
+          </label>
+          <label class="block sm:col-span-2">
+            <span class="text-sm font-semibold text-navy-900">¿Qué necesitas? *</span>
+            <select
+              name="servicio"
+              required
+              class="mt-1.5 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 outline-none focus:border-navy-700 focus:ring-2 focus:ring-navy-700/20"
+            >
+              <option value="">Selecciona una opción</option>
+              {opciones.map((o) => <option value={o.id}>{o.label}</option>)}
+            </select>
+          </label>
+          <label class="block sm:col-span-2">
+            <span class="text-sm font-semibold text-navy-900">Cuéntame tu caso *</span>
+            <textarea
+              name="mensaje"
+              required
+              rows="5"
+              placeholder="Ej.: Tengo una tienda en Mérida y quiero una página web para mostrar mis productos."
+              class="mt-1.5 w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-navy-700 focus:ring-2 focus:ring-navy-700/20"
+            ></textarea>
+          </label>
+        </div>
+        <p id="form-error" class="mt-4 hidden text-sm font-medium text-red-600" role="alert">
+          Completa tu nombre, el servicio y tu mensaje.
+        </p>
+        <button type="submit" class="btn-primary mt-6 w-full sm:w-auto">
+          Enviar consulta <Icon name="send" size={18} />
+        </button>
+        <p class="mt-4 text-xs text-gris">
+          Tus datos solo se usan para responder tu consulta. <a href="/privacidad" class="underline">Política de privacidad</a>.
+        </p>
+      </form>
+    </div>
+  </section>
+</BaseLayout>
+
+<script>
+  // El formulario guarda la consulta en el panel de VenusTech y abre WhatsApp con el mensaje listo.
+  const form = document.getElementById('formulario') as HTMLFormElement;
+  const error = document.getElementById('form-error')!;
+  const select = form.elements.namedItem('servicio') as HTMLSelectElement;
+  const wa = form.dataset.wa!;
+
+  const preseleccion = new URLSearchParams(location.search).get('servicio');
+  if (preseleccion && [...select.options].some((o) => o.value === preseleccion)) select.value = preseleccion;
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const datos = new FormData(form);
+    const nombre = String(datos.get('nombre') ?? '').trim();
+    const empresa = String(datos.get('empresa') ?? '').trim();
+    const telefono = String(datos.get('telefono') ?? '').trim();
+    const mensaje = String(datos.get('mensaje') ?? '').trim();
+    if (!nombre || !select.value || !mensaje) {
+      error.classList.remove('hidden');
+      return;
+    }
+    error.classList.add('hidden');
+    const servicio = select.options[select.selectedIndex].text;
+    const texto = [
+      'Hola, vengo de la web de VenusTech.',
+      `• Nombre: ${nombre}`,
+      empresa && `• Empresa: ${empresa}`,
+      telefono && `• Teléfono: ${telefono}`,
+      `• Servicio: ${servicio}`,
+      `• Mensaje: ${mensaje}`,
+    ]
+      .filter(Boolean)
+      .join('\n');
+    // Se abre WhatsApp primero (en el mismo clic, para que el navegador no lo bloquee)
+    window.open(`https://wa.me/${wa}?text=${encodeURIComponent(texto)}`, '_blank', 'noopener');
+    const registro = JSON.stringify({ nombre, empresa, telefono, servicio, mensaje, sitio_web: datos.get('sitio_web') });
+    navigator.sendBeacon?.('/api/contacto', new Blob([registro], { type: 'text/plain' }));
+    window.vtTrack?.('formulario_enviado', servicio);
+    form.reset();
+  });
+</script>

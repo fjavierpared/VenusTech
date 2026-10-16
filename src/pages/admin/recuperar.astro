@@ -1,0 +1,68 @@
+---
+import AuthLayout from '../../layouts/AuthLayout.astro';
+import { crearSolicitud } from '../../lib/recuperacion';
+import { correoAdmin, correoConfigurado, enviarCorreo } from '../../lib/correo';
+import { SITE } from '../../data/site';
+
+export const prerender = false;
+
+let enviado = false;
+
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  const token = crearSolicitud(String(form.get('usuario') ?? '').trim());
+  if (token) {
+    // En producción el enlace usa siempre el dominio configurado (SITE_URL), nunca el que envíe el navegador
+    const base = import.meta.env.PROD ? SITE.url : Astro.url.origin;
+    const enlace = `${base}/admin/restablecer?token=${token}`;
+    await enviarCorreo({
+      asunto: 'Restablecer tu contraseña del panel VenusTech',
+      texto: `Hola,\n\nAlguien (probablemente tú) pidió restablecer la contraseña del panel de VenusTech.\n\nAbre este enlace para elegir una nueva (vence en 30 minutos y sirve una sola vez):\n${enlace}\n\nSi no fuiste tú, ignora este correo: tu contraseña actual sigue funcionando.\n`,
+    });
+  }
+  // Siempre la misma respuesta: no revela si el usuario existe
+  enviado = true;
+}
+
+// Muestra solo el inicio del correo destino, para que sepas dónde buscar
+const pista = correoAdmin().replace(/^(.{3}).*(@.*)$/, '$1•••$2');
+---
+
+<AuthLayout titulo="Recuperar contraseña">
+  <div class="rounded-3xl bg-white p-7 shadow-2xl">
+    <h1 class="text-2xl font-bold text-navy-900">¿Olvidaste tu contraseña?</h1>
+    {
+      enviado ? (
+        <div class="mt-4 space-y-3 text-sm text-gris">
+          <p class="rounded-xl bg-acento/10 p-3 font-medium text-navy-900">
+            Si el usuario es correcto, enviamos un enlace a <strong>{pista}</strong>. Vence en 30 minutos.
+          </p>
+          <p>Revisa también la carpeta de spam.</p>
+          {!correoConfigurado() && (
+            <p class="rounded-xl bg-ambar/15 p-3 text-navy-900">
+              El envío de correos aún no está configurado: el enlace aparece en la terminal donde está corriendo la web.
+            </p>
+          )}
+        </div>
+      ) : (
+        <form method="post">
+          <p class="mt-1 text-sm text-gris">
+            Escribe tu usuario y te enviaremos un enlace a <strong>{pista}</strong> para crear una nueva.
+          </p>
+          <label class="mt-6 block">
+            <span class="text-sm font-semibold text-navy-900">Usuario</span>
+            <input
+              name="usuario"
+              required
+              autocomplete="username"
+              autofocus
+              class="mt-1.5 w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-navy-700 focus:ring-2 focus:ring-navy-700/20"
+            />
+          </label>
+          <button class="btn-primary mt-6 w-full">Enviar enlace</button>
+        </form>
+      )
+    }
+  </div>
+  <a slot="pie" href="/admin/login" class="hover:text-white">← Volver al login</a>
+</AuthLayout>

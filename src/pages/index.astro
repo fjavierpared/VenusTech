@@ -1,0 +1,394 @@
+---
+import { Image } from 'astro:assets';
+import { getCollection } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Icon from '../components/Icon.astro';
+import CircuitBg from '../components/CircuitBg.astro';
+import SectionHeader from '../components/SectionHeader.astro';
+import Faq from '../components/Faq.astro';
+import CtaFinal from '../components/CtaFinal.astro';
+import foto from '../assets/fotos/francisco.jpg';
+import { SITE, TECNOLOGIAS, waLink } from '../data/site';
+import { SERVICIOS } from '../data/servicios';
+import { faqSchema } from '../lib/schema';
+
+const proyectos = (await getCollection('proyectos'))
+  .filter((p) => p.data.destacado)
+  .sort((a, b) => a.data.orden - b.data.orden);
+
+const [web, ...otrosServicios] = SERVICIOS;
+
+const problemas = [
+  {
+    icon: 'layout',
+    titulo: 'Tu negocio no aparece en internet',
+    texto: 'Tus clientes te buscan en Google y en el celular. Creo una web profesional que te encuentren y que genere contactos.',
+  },
+  {
+    icon: 'file-text',
+    titulo: 'Todo se lleva en papel o en Excel',
+    texto: 'Facturación, inventario o asistencia a mano. Desarrollo un sistema a medida que lo automatiza y te da reportes al instante.',
+  },
+  {
+    icon: 'alert',
+    titulo: 'Equipos lentos, fallas o información perdida',
+    texto: 'Formateo, mantenimiento y recuperación de datos. Encuentro la causa real para que no vuelva a pasar.',
+  },
+  {
+    icon: 'cctv',
+    titulo: 'Quieres vigilar tu local desde el celular',
+    texto: 'Instalo cámaras con acceso remoto seguro, sin dejar tu sistema expuesto a intrusos.',
+  },
+] as const;
+
+const proceso = [
+  { icon: 'search', titulo: 'Diagnóstico', texto: 'Reviso tu situación y entiendo lo que de verdad necesitas.' },
+  { icon: 'layout', titulo: 'Diseño', texto: 'Te propongo una solución con alcance, costo y plazos claros.' },
+  { icon: 'wrench', titulo: 'Implementación', texto: 'La ejecuto, la pruebo contigo y te la dejo documentada.' },
+  { icon: 'life-buoy', titulo: 'Soporte', texto: 'Mantenimiento y acompañamiento para que siga funcionando.' },
+] as const;
+
+const diferenciadores = [
+  {
+    icon: 'network',
+    titulo: 'Visión integral',
+    texto: 'Entiendo cómo se conectan tu web, tu red, tus servidores y tu seguridad. Resuelvo el problema completo, no el síntoma.',
+  },
+  {
+    icon: 'file-text',
+    titulo: 'Todo documentado',
+    texto: 'Te entrego accesos, configuraciones y manuales. Nada de cajas negras ni dependencia forzada.',
+  },
+  {
+    icon: 'shield-check',
+    titulo: 'Seguridad por defecto',
+    texto: 'Contraseñas, respaldos y accesos seguros desde el primer día, no como un extra.',
+  },
+  {
+    icon: 'user',
+    titulo: 'Trato directo',
+    texto: 'Hablas con el ingeniero que hace el trabajo. Sin intermediarios ni respuestas de manual.',
+  },
+] as const;
+
+const faqs = [
+  {
+    q: '¿Qué servicios ofrece VenusTech?',
+    a: 'Desarrollo de páginas web y sistemas a medida, soporte técnico e infraestructura TI (formateo, mantenimiento, recuperación de datos, servidores Linux, Proxmox y Windows, redes), instalación de cámaras de seguridad y venta de equipos de computación.',
+  },
+  {
+    q: '¿Dónde atiende VenusTech?',
+    a: 'Atiendo de forma presencial en Mérida, Venezuela. El desarrollo web, la administración de servidores y el soporte remoto los hago para toda Venezuela y el exterior.',
+  },
+  {
+    q: '¿Cuánto cuestan los servicios?',
+    a: 'Cada proyecto se cotiza según su alcance. Escríbeme por WhatsApp o por el formulario, cuéntame qué necesitas y te envío una propuesta clara, sin compromiso.',
+  },
+  {
+    q: '¿En qué se diferencia VenusTech de un técnico común?',
+    a: 'Detrás de VenusTech hay un ingeniero de sistemas: diagnostico, diseño la solución, la implemento, la documento y le doy soporte. Así resuelvo el problema completo y no solo el síntoma.',
+  },
+];
+---
+
+<BaseLayout
+  title={`VenusTech | Páginas web, soporte TI y cámaras en ${SITE.city}`}
+  fullTitle
+  description={SITE.description}
+  schema={[faqSchema(faqs)]}
+>
+  <!-- HERO -->
+  <section class="relative isolate overflow-hidden bg-navy-900 text-white">
+    <CircuitBg class="-z-10" />
+    <div class="container-vt grid items-center gap-12 py-16 sm:py-20 lg:grid-cols-[1.15fr_1fr] lg:py-28">
+      <div>
+        <p class="font-display text-sm font-semibold tracking-[0.25em] text-ambar uppercase">
+          Ingeniería de sistemas · {SITE.city}, Venezuela
+        </p>
+        <h1 class="mt-5 text-4xl leading-[1.08] font-extrabold sm:text-5xl lg:text-6xl">
+          Páginas web y sistemas a medida,{' '}
+          <span class="bg-linear-to-r from-naranja to-ambar bg-clip-text text-transparent">hechos por un ingeniero</span>
+        </h1>
+        <p class="mt-6 max-w-xl text-lg leading-relaxed text-white/80 sm:text-xl">
+          En VenusTech diseño tu web, la pongo en marcha en un servidor seguro y la mantengo funcionando. También me
+          encargo de tu soporte técnico, tus servidores y tus cámaras de seguridad.
+        </p>
+        <div class="mt-9 flex flex-col gap-3 sm:flex-row">
+          <a href="/contacto?servicio=web#formulario" class="btn-primary">
+            Quiero mi página web <Icon name="arrow-right" size={18} />
+          </a>
+          <a href={waLink()} class="btn-outline-light" target="_blank" rel="noopener">
+            <Icon name="whatsapp" size={20} /> Escríbeme por WhatsApp
+          </a>
+        </div>
+        <ul class="mt-9 flex flex-wrap gap-x-6 gap-y-2 text-sm text-white/70">
+          <li class="flex items-center gap-2"><Icon name="check" size={16} class="text-acento" /> Ingeniero de Sistemas</li>
+          <li class="flex items-center gap-2">
+            <Icon name="check" size={16} class="text-acento" />
+            {SITE.yearsExperience} años en soporte y servidores
+          </li>
+          <li class="flex items-center gap-2">
+            <Icon name="check" size={16} class="text-acento" /> Presencial en {SITE.city} · remoto en todo el país
+          </li>
+        </ul>
+      </div>
+
+      <!-- Panel "vidrio" inspirado en la tarjeta de VenusTech -->
+      <div class="relative">
+        <div class="card-vidrio relative p-6 sm:p-8">
+          <p class="banda">Servicios</p>
+          <ul class="mt-6 space-y-4">
+            {
+              SERVICIOS.map((s) => (
+                <li>
+                  <a href={`/servicios/${s.slug}`} class="group flex items-start gap-4 rounded-2xl p-2 transition hover:bg-white/5">
+                    <span class="flex size-11 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-naranja to-ambar text-navy-950">
+                      <Icon name={s.icon} size={22} strokeWidth={2} />
+                    </span>
+                    <span>
+                      <span class="block font-display font-semibold text-white group-hover:text-ambar">{s.nombre}</span>
+                      <span class="mt-0.5 block text-sm text-white/65">{s.resumen}</span>
+                    </span>
+                  </a>
+                </li>
+              ))
+            }
+            <li>
+              <a href="/equipos" class="group flex items-start gap-4 rounded-2xl p-2 transition hover:bg-white/5">
+                <span class="flex size-11 shrink-0 items-center justify-center rounded-xl bg-white/10 text-ambar">
+                  <Icon name="laptop" size={22} strokeWidth={2} />
+                </span>
+                <span>
+                  <span class="block font-display font-semibold text-white group-hover:text-ambar">Venta de equipos</span>
+                  <span class="mt-0.5 block text-sm text-white/65">PC, laptops, discos, RAM, UPS, routers, impresoras y cámaras.</span>
+                </span>
+              </a>
+            </li>
+          </ul>
+        </div>
+        <p
+          class="absolute top-0 -right-12 hidden h-full text-center font-display text-sm font-semibold tracking-[0.35em] whitespace-nowrap text-white/25 uppercase [writing-mode:vertical-rl] xl:block"
+          aria-hidden="true"
+        >
+          Ingeniero de sistemas
+        </p>
+      </div>
+    </div>
+
+    <!-- Tecnologías -->
+    <div class="border-t border-white/10 bg-navy-950/40">
+      <div class="container-vt py-6">
+        <p class="sr-only">Tecnologías con las que trabajo</p>
+        <ul class="flex flex-wrap justify-center gap-x-6 gap-y-2 font-display text-sm font-medium tracking-wide text-white/55">
+          {TECNOLOGIAS.map((t) => <li>{t}</li>)}
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROBLEMAS -->
+  <section class="bg-white py-20 sm:py-24">
+    <div class="container-vt">
+      <SectionHeader
+        banda="Lo que resuelvo"
+        titulo="Tecnología que trabaja para tu negocio, no en su contra"
+        texto="Estos son los problemas que más veo en negocios y oficinas de Mérida, y cómo los resuelvo."
+      />
+      <div class="mt-12 grid gap-5 sm:grid-cols-2">
+        {
+          problemas.map((p) => (
+            <article class="reveal rounded-3xl border border-navy-700/10 bg-crema/50 p-7">
+              <span class="flex size-12 items-center justify-center rounded-2xl bg-navy-900 text-ambar">
+                <Icon name={p.icon} size={24} />
+              </span>
+              <h3 class="mt-5 text-xl font-bold text-navy-900">{p.titulo}</h3>
+              <p class="mt-2 leading-relaxed text-gris">{p.texto}</p>
+            </article>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- SERVICIOS -->
+  <section class="bg-slate-50 py-20 sm:py-24" id="servicios">
+    <div class="container-vt">
+      <SectionHeader
+        banda="Servicios"
+        titulo="Soluciones completas: del diagnóstico al soporte"
+        texto="Un solo responsable para tu web, tus equipos, tus servidores y tu seguridad."
+      />
+
+      <!-- Servicio principal: desarrollo web -->
+      <article class="reveal relative isolate mt-12 overflow-hidden rounded-[2rem] bg-navy-900 p-8 text-white sm:p-10 lg:grid lg:grid-cols-2 lg:gap-10">
+        <CircuitBg class="-z-10 opacity-70" />
+        <div>
+          <span class="inline-flex items-center gap-2 rounded-full bg-naranja/15 px-3 py-1 text-xs font-semibold tracking-wider text-ambar uppercase">
+            Servicio principal
+          </span>
+          <h3 class="mt-4 text-2xl font-bold sm:text-3xl">{web.nombre}</h3>
+          <p class="mt-3 text-lg leading-relaxed text-white/75">{web.intro}</p>
+          <a href={`/servicios/${web.slug}`} class="btn-primary mt-7">
+            Ver desarrollo web <Icon name="arrow-right" size={18} />
+          </a>
+        </div>
+        <ul class="mt-8 grid gap-3 lg:mt-0">
+          {
+            web.incluye.map((i) => (
+              <li class="flex items-start gap-3 rounded-2xl bg-white/5 px-4 py-3 text-white/85">
+                <Icon name="check" size={20} class="mt-0.5 shrink-0 text-acento" strokeWidth={2.25} />
+                {i}
+              </li>
+            ))
+          }
+        </ul>
+      </article>
+
+      <div class="mt-5 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+        {
+          otrosServicios.map((s) => (
+            <article class="reveal flex flex-col rounded-3xl border border-navy-700/10 bg-white p-7 shadow-sm">
+              <span class="flex size-12 items-center justify-center rounded-2xl bg-linear-to-br from-naranja to-ambar text-navy-950">
+                <Icon name={s.icon} size={24} strokeWidth={2} />
+              </span>
+              <h3 class="mt-5 text-xl font-bold text-navy-900">{s.nombre}</h3>
+              <p class="mt-2 flex-1 leading-relaxed text-gris">{s.resumen}</p>
+              <a href={`/servicios/${s.slug}`} class="mt-6 inline-flex items-center gap-2 font-semibold text-navy-700 hover:text-naranja">
+                Ver servicio <Icon name="arrow-right" size={18} />
+              </a>
+            </article>
+          ))
+        }
+        <article class="reveal flex flex-col rounded-3xl border border-navy-700/10 bg-white p-7 shadow-sm">
+          <span class="flex size-12 items-center justify-center rounded-2xl bg-navy-900 text-ambar">
+            <Icon name="laptop" size={24} strokeWidth={2} />
+          </span>
+          <h3 class="mt-5 text-xl font-bold text-navy-900">Venta de equipos</h3>
+          <p class="mt-2 flex-1 leading-relaxed text-gris">
+            PC, laptops, discos, memoria RAM, UPS, routers, impresoras y cámaras. Te asesoro para que compres el equipo
+            correcto, no el más caro.
+          </p>
+          <a href="/equipos" class="mt-6 inline-flex items-center gap-2 font-semibold text-navy-700 hover:text-naranja">
+            Ver equipos <Icon name="arrow-right" size={18} />
+          </a>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROCESO -->
+  <section class="bg-white py-20 sm:py-24">
+    <div class="container-vt">
+      <SectionHeader
+        banda="Cómo trabajo"
+        titulo="Un proceso de ingeniería, no un arreglo rápido"
+        texto="Cada proyecto sigue el mismo método, así sabes siempre en qué punto estamos y qué viene después."
+        centrado
+      />
+      <ol class="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        {
+          proceso.map((p, i) => (
+            <li class="reveal relative rounded-3xl border border-navy-700/10 p-7">
+              <span class="font-display text-5xl font-extrabold text-navy-700/10">{String(i + 1).padStart(2, '0')}</span>
+              <span class="absolute top-7 right-7 flex size-11 items-center justify-center rounded-xl bg-crema text-naranja">
+                <Icon name={p.icon} size={22} />
+              </span>
+              <h3 class="mt-3 text-xl font-bold text-navy-900">{p.titulo}</h3>
+              <p class="mt-2 leading-relaxed text-gris">{p.texto}</p>
+            </li>
+          ))
+        }
+      </ol>
+    </div>
+  </section>
+
+  <!-- POR QUÉ VENUSTECH -->
+  <section class="relative isolate overflow-hidden bg-navy-900 py-20 text-white sm:py-24">
+    <CircuitBg class="-z-10 opacity-60" />
+    <div class="container-vt grid items-center gap-12 lg:grid-cols-[0.85fr_1.15fr]">
+      <div class="relative mx-auto w-full max-w-sm">
+        <div class="absolute -inset-3 -z-10 rotate-3 rounded-[2rem] bg-linear-to-br from-naranja to-ambar opacity-90"></div>
+        <Image
+          src={foto}
+          alt={`${SITE.owner}, ingeniero de sistemas y fundador de VenusTech`}
+          widths={[320, 480, 640]}
+          sizes="(min-width: 1024px) 384px, 90vw"
+          class="aspect-square w-full rounded-[2rem] object-cover"
+        />
+        <div class="absolute -bottom-5 left-1/2 w-max -translate-x-1/2 rounded-2xl bg-white px-5 py-3 text-center shadow-xl">
+          <p class="font-display font-bold text-navy-900">Ing. {SITE.owner}</p>
+          <p class="text-xs text-gris">Fundador de VenusTech</p>
+        </div>
+      </div>
+      <div>
+        <SectionHeader
+          banda="Por qué VenusTech"
+          titulo="Detrás de VenusTech hay un ingeniero de sistemas"
+          texto={`Llevo ${SITE.yearsExperience} años administrando servidores Linux, Proxmox y Windows y dando soporte técnico. Por eso, cuando desarrollo una web o un sistema, sé exactamente dónde y cómo va a funcionar.`}
+          oscuro
+        />
+        <div class="mt-10 grid gap-6 sm:grid-cols-2">
+          {
+            diferenciadores.map((d) => (
+              <div>
+                <span class="flex size-11 items-center justify-center rounded-xl bg-white/10 text-ambar">
+                  <Icon name={d.icon} size={22} />
+                </span>
+                <h3 class="mt-4 text-lg font-bold">{d.titulo}</h3>
+                <p class="mt-1.5 leading-relaxed text-white/70">{d.texto}</p>
+              </div>
+            ))
+          }
+        </div>
+        <a href="/sobre-venustech" class="btn-outline-light mt-10">Conoce VenusTech <Icon name="arrow-right" size={18} /></a>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROYECTOS -->
+  <section class="bg-slate-50 py-20 sm:py-24">
+    <div class="container-vt">
+      <div class="flex flex-col justify-between gap-6 sm:flex-row sm:items-end">
+        <SectionHeader banda="Proyectos" titulo="Sistemas reales, funcionando" texto="Algunos proyectos que he diseñado y desarrollado." />
+        <a href="/proyectos" class="btn-outline-dark shrink-0">Ver todos</a>
+      </div>
+      <div class="mt-12 grid gap-6 lg:grid-cols-2">
+        {
+          proyectos.map((p) => (
+            <article class="reveal group relative flex flex-col rounded-3xl border border-navy-700/10 bg-white p-7 shadow-sm transition hover:shadow-lg sm:p-8">
+              <p class="text-sm font-semibold tracking-wide text-naranja uppercase">{p.data.categoria}</p>
+              <h3 class="mt-2 text-2xl font-bold text-navy-900">
+                <a href={`/proyectos/${p.id}`} class="after:absolute after:inset-0 group-hover:text-navy-700">
+                  {p.data.titulo}
+                </a>
+              </h3>
+              <p class="mt-3 flex-1 leading-relaxed text-gris">{p.data.resumen}</p>
+              <ul class="mt-6 flex flex-wrap gap-2">
+                {p.data.stack.map((t) => (
+                  <li class="rounded-full bg-crema px-3 py-1 text-xs font-medium text-navy-800">{t}</li>
+                ))}
+              </ul>
+              <span class="mt-6 inline-flex items-center gap-2 font-semibold text-navy-700 group-hover:text-naranja">
+                Ver caso <Icon name="arrow-right" size={18} />
+              </span>
+            </article>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="bg-white py-20 sm:py-24">
+    <div class="container-vt grid gap-10 lg:grid-cols-[0.8fr_1.2fr]">
+      <SectionHeader
+        banda="Preguntas"
+        titulo="Preguntas frecuentes"
+        texto="¿Tienes otra duda? Abre el chat o escríbeme por WhatsApp."
+      />
+      <Faq faqs={faqs} />
+    </div>
+  </section>
+
+  <CtaFinal />
+</BaseLayout>

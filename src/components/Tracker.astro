@@ -1,0 +1,33 @@
+<script>
+  // Analítica propia de VenusTech: sin cookies, los datos quedan en tu propio servidor.
+  function enviar(datos: Record<string, unknown>) {
+    const cuerpo = JSON.stringify(datos);
+    try {
+      if (navigator.sendBeacon?.('/api/t', new Blob([cuerpo], { type: 'text/plain' }))) return;
+      fetch('/api/t', { method: 'POST', body: cuerpo, keepalive: true }).catch(() => {});
+    } catch {}
+  }
+
+  window.vtTrack = (tipo, detalle) => enviar({ t: 'evento', tipo, detalle, ruta: location.pathname });
+
+  enviar({
+    t: 'visita',
+    ruta: location.pathname,
+    ref: document.referrer,
+    utm: new URLSearchParams(location.search).get('utm_source'),
+    w: window.innerWidth,
+  });
+
+  document.addEventListener(
+    'click',
+    (e) => {
+      const a = (e.target as HTMLElement).closest('a');
+      if (!a) return;
+      const href = a.getAttribute('href') ?? '';
+      if (href.includes('wa.me/')) window.vtTrack?.('click_whatsapp', a.textContent?.trim().slice(0, 60));
+      else if (href.includes('instagram.com')) window.vtTrack?.('click_instagram');
+      else if (href.startsWith('mailto:')) window.vtTrack?.('click_correo');
+    },
+    { capture: true },
+  );
+</script>

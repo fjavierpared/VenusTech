@@ -1,0 +1,109 @@
+---
+// Columnas de visitas por día: una sola serie (sin leyenda), barras finas con extremo redondeado,
+// cuadrícula tenue, tooltip al pasar el mouse y tabla equivalente para lectores de pantalla.
+interface Props {
+  serie: { dia: string; visitas: number; visitantes: number }[];
+}
+const { serie } = Astro.props;
+
+const W = 800;
+const H = 240;
+const M = { top: 12, right: 8, bottom: 28, left: 36 };
+const ancho = W - M.left - M.right;
+const alto = H - M.top - M.bottom;
+
+// Máximo "redondo" del eje Y y 4 marcas
+const maxDato = Math.max(...serie.map((d) => d.visitas), 1);
+const paso = (() => {
+  const bruto = maxDato / 4;
+  const mag = 10 ** Math.floor(Math.log10(bruto));
+  return [1, 2, 2.5, 5, 10].map((m) => m * mag).find((p) => p >= bruto && Number.isInteger(p)) ?? Math.ceil(bruto);
+})();
+const maxY = paso * 4;
+const ticks = [0, 1, 2, 3, 4].map((i) => i * paso);
+
+const slot = ancho / serie.length;
+const barra = Math.max(2, Math.min(24, slot - 2));
+const y = (v: number) => M.top + alto - (v / maxY) * alto;
+const R = 4;
+
+function columna(x: number, valor: number) {
+  if (valor <= 0) return '';
+  const top = y(valor);
+  const h = M.top + alto - top;
+  const r = Math.min(R, barra / 2, h);
+  const base = M.top + alto;
+  return `M${x},${base} V${top + r} Q${x},${top} ${x + r},${top} H${x + barra - r} Q${x + barra},${top} ${x + barra},${top + r} V${base} Z`;
+}
+
+const fmtDia = (iso: string) => {
+  const [a, m, d] = iso.split('-').map(Number);
+  return new Intl.DateTimeFormat('es-VE', { day: 'numeric', month: 'short' }).format(new Date(a, m - 1, d));
+};
+const cadaN = Math.ceil(serie.length / 8);
+---
+
+<figure class="vt-grafico relative">
+  <svg viewBox={`0 0 ${W} ${H}`} class="h-auto w-full" role="img" aria-label="Visitas por día">
+    {
+      ticks.map((t) => (
+        <g>
+          <line x1={M.left} x2={W - M.right} y1={y(t)} y2={y(t)} stroke="#e2e8f0" stroke-width="1" />
+          <text x={M.left - 8} y={y(t) + 4} text-anchor="end" font-size="11" fill="#64748b">
+            {t >= 1000 ? `${t / 1000}K` : t}
+          </text>
+        </g>
+      ))
+    }
+    {
+      serie.map((d, i) => {
+        const x = M.left + i * slot + (slot - barra) / 2;
+        return (
+          <g class="vt-col" data-dia={fmtDia(d.dia)} data-visitas={d.visitas} data-visitantes={d.visitantes}>
+            <rect x={M.left + i * slot} y={M.top} width={slot} height={alto} fill="transparent" />
+            <path d={columna(x, d.visitas)} fill="#1d6fd1" class="vt-barra" />
+            {i % cadaN === 0 && (
+              <text x={x + barra / 2} y={H - 8} text-anchor="middle" font-size="11" fill="#64748b">
+                {fmtDia(d.dia)}
+              </text>
+            )}
+          </g>
+        );
+      })
+    }
+  </svg>
+  <div
+    class="vt-tooltip pointer-events-none absolute hidden -translate-x-1/2 -translate-y-full rounded-lg bg-navy-950 px-3 py-2 text-xs whitespace-nowrap text-white shadow-lg"
+  >
+  </div>
+  <table class="sr-only">
+    <caption>Visitas por día</caption>
+    <thead><tr><th>Día</th><th>Visitas</th><th>Visitantes</th></tr></thead>
+    <tbody>{serie.map((d) => <tr><td>{d.dia}</td><td>{d.visitas}</td><td>{d.visitantes}</td></tr>)}</tbody>
+  </table>
+</figure>
+
+<style>
+  .vt-col:hover .vt-barra {
+    fill: #0c4782;
+  }
+</style>
+
+<script>
+  document.querySelectorAll<HTMLElement>('.vt-grafico').forEach((fig) => {
+    const tip = fig.querySelector<HTMLElement>('.vt-tooltip')!;
+    fig.querySelectorAll<SVGGElement>('.vt-col').forEach((col) => {
+      col.addEventListener('mouseenter', () => {
+        const { dia, visitas, visitantes } = col.dataset;
+        tip.innerHTML = `<strong>${dia}</strong><br>${visitas} visitas · ${visitantes} visitantes`;
+        const r = col.getBoundingClientRect();
+        const f = fig.getBoundingClientRect();
+        const barra = col.querySelector('.vt-barra')!.getBoundingClientRect();
+        tip.style.left = `${r.left - f.left + r.width / 2}px`;
+        tip.style.top = `${(barra.height ? barra.top : r.bottom - 28) - f.top - 6}px`;
+        tip.classList.remove('hidden');
+      });
+      col.addEventListener('mouseleave', () => tip.classList.add('hidden'));
+    });
+  });
+</script>

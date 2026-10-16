@@ -1,0 +1,40 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PageHero from '../components/PageHero.astro';
+import { SITE, instagramUrl } from '../data/site';
+
+const migas = [{ name: 'Política de privacidad', path: '/privacidad' }];
+---
+
+<BaseLayout title="Política de privacidad" description="Política de privacidad de VenusTech: cómo se tratan los datos que envías por el formulario, WhatsApp o redes." breadcrumbs={migas}>
+  <PageHero titulo="Política de privacidad" migas={migas} />
+  <section class="bg-white py-16">
+    <div class="container-vt prose-vt max-w-3xl">
+      <p>
+        En <strong>{SITE.name}</strong> ({SITE.legalName}, RIF {SITE.rif}), con sede en {SITE.city}, {SITE.country},
+        respeto tu privacidad. Esta política explica qué datos recibo y cómo los uso.
+      </p>
+      <h2>Datos que recibo</h2>
+      <p>
+        Solo los que tú me envías por el formulario de contacto, WhatsApp, Instagram o correo: tu nombre, tu negocio, tus
+        datos de contacto y la descripción de tu consulta.
+      </p>
+      <h2>Para qué los uso</h2>
+      <ul>
+        <li>Responder tu consulta y prepararte una propuesta.</li>
+        <li>Prestarte el servicio contratado y darte soporte.</li>
+      </ul>
+      <p>No vendo ni comparto tus datos con terceros con fines comerciales.</p>
+      <h2>Servicios de terceros</h2>
+      <p>
+        Al contactarme por WhatsApp o Instagram, tus mensajes también se rigen por las políticas de privacidad de esas
+        plataformas.
+      </p>
+      <h2>Tus derechos</h2>
+      <p>
+        Puedes pedirme en cualquier momento que corrija o elimine tus datos, escribiéndome por
+        <a href={`https://wa.me/${SITE.whatsapp}`}>WhatsApp</a> o por <a href={instagramUrl}>Instagram</a>.
+      </p>
+    </div>
+  </section>
+</BaseLayout>

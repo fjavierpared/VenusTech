@@ -1,0 +1,19 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import CircuitBg from '../components/CircuitBg.astro';
+---
+
+<BaseLayout title="Página no encontrada" description="La página que buscas no existe en VenusTech." noindex>
+  <section class="relative isolate flex min-h-[70vh] items-center overflow-hidden bg-navy-900 text-white">
+    <CircuitBg class="-z-10" />
+    <div class="container-vt py-20 text-center">
+      <p class="font-display text-8xl font-extrabold text-ambar">404</p>
+      <h1 class="mt-4 text-3xl font-bold sm:text-4xl">Esta ruta no está en la red</h1>
+      <p class="mx-auto mt-4 max-w-md text-white/75">La página que buscas no existe o cambió de lugar.</p>
+      <div class="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
+        <a href="/" class="btn-primary">Volver al inicio</a>
+        <a href="/servicios" class="btn-outline-light">Ver servicios</a>
+      </div>
+    </div>
+  </section>
+</BaseLayout>

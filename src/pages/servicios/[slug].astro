@@ -1,0 +1,134 @@
+---
+import type { GetStaticPaths } from 'astro';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PageHero from '../../components/PageHero.astro';
+import SectionHeader from '../../components/SectionHeader.astro';
+import Icon from '../../components/Icon.astro';
+import Faq from '../../components/Faq.astro';
+import CtaFinal from '../../components/CtaFinal.astro';
+import { SERVICIOS, type Servicio } from '../../data/servicios';
+import { waLink } from '../../data/site';
+import { faqSchema, serviceSchema } from '../../lib/schema';
+
+export const getStaticPaths = (() =>
+  SERVICIOS.map((s) => ({ params: { slug: s.slug }, props: { servicio: s } }))) satisfies GetStaticPaths;
+
+const { servicio: s } = Astro.props as { servicio: Servicio };
+const path = `/servicios/${s.slug}`;
+const migas = [
+  { name: 'Servicios', path: '/servicios' },
+  { name: s.nombre, path },
+];
+const otros = SERVICIOS.filter((o) => o.slug !== s.slug);
+---
+
+<BaseLayout
+  title={s.seoTitle}
+  description={s.seoDescription}
+  breadcrumbs={migas}
+  schema={[serviceSchema({ name: s.nombre, description: s.seoDescription, path }), faqSchema(s.faqs)]}
+>
+  <PageHero banda={s.nombre} titulo={s.h1} texto={s.intro} migas={migas}>
+    <div class="mt-9 flex flex-col gap-3 sm:flex-row">
+      <a href={waLink(s.waMensaje)} class="btn-primary" target="_blank" rel="noopener">
+        <Icon name="whatsapp" size={20} /> Cotizar por WhatsApp
+      </a>
+      <a href="/contacto" class="btn-outline-light">Usar el formulario</a>
+    </div>
+  </PageHero>
+
+  <!-- Para quién -->
+  <section class="bg-white py-20">
+    <div class="container-vt">
+      <SectionHeader banda="Para quién es" titulo="¿Este servicio es para ti?" />
+      <ul class="mt-10 grid gap-5 md:grid-cols-3">
+        {
+          s.paraQuien.map((p) => (
+            <li class="reveal rounded-3xl border border-navy-700/10 bg-crema/50 p-7 leading-relaxed text-gris">
+              <Icon name="user" size={26} class="mb-4 text-naranja" />
+              {p}
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </section>
+
+  <!-- Qué incluye -->
+  <section class="bg-slate-50 py-20">
+    <div class="container-vt grid gap-10 lg:grid-cols-[0.8fr_1.2fr]">
+      <SectionHeader
+        banda="Qué incluye"
+        titulo="Lo que hago por ti"
+        texto="Cada trabajo se adapta a tu caso. Estos son los puntos que normalmente cubro."
+      />
+      <ul class="grid gap-3">
+        {
+          s.incluye.map((i) => (
+            <li class="flex items-start gap-3 rounded-2xl border border-navy-700/10 bg-white px-5 py-4 text-tinta shadow-sm">
+              <span class="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-acento/15 text-acento">
+                <Icon name="check" size={16} strokeWidth={2.5} />
+              </span>
+              {i}
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </section>
+
+  <!-- Proceso -->
+  <section class="bg-white py-20">
+    <div class="container-vt">
+      <SectionHeader banda="Cómo lo hago" titulo="Paso a paso, sin sorpresas" centrado />
+      <ol class="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        {
+          s.proceso.map((p, i) => (
+            <li class="reveal rounded-3xl border border-navy-700/10 p-7">
+              <span class="font-display text-4xl font-extrabold text-naranja">{String(i + 1).padStart(2, '0')}</span>
+              <h3 class="mt-3 text-lg font-bold text-navy-900">{p.titulo}</h3>
+              <p class="mt-2 leading-relaxed text-gris">{p.texto}</p>
+            </li>
+          ))
+        }
+      </ol>
+      <div class="mt-12 rounded-3xl bg-navy-900 px-6 py-6 text-center">
+        <p class="font-display text-sm font-semibold tracking-widest text-white/60 uppercase">Tecnologías</p>
+        <ul class="mt-3 flex flex-wrap justify-center gap-2">
+          {s.tecnologias.map((t) => <li class="rounded-full bg-white/10 px-3.5 py-1.5 text-sm text-white">{t}</li>)}
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="bg-slate-50 py-20">
+    <div class="container-vt grid gap-10 lg:grid-cols-[0.8fr_1.2fr]">
+      <SectionHeader banda="Preguntas" titulo="Preguntas frecuentes" />
+      <Faq faqs={s.faqs} />
+    </div>
+  </section>
+
+  <!-- Otros servicios -->
+  <section class="bg-white pt-20">
+    <div class="container-vt">
+      <h2 class="text-2xl font-bold text-navy-900">Otros servicios de VenusTech</h2>
+      <div class="mt-6 grid gap-4 md:grid-cols-3">
+        {
+          otros.map((o) => (
+            <a href={`/servicios/${o.slug}`} class="group flex items-center gap-4 rounded-2xl border border-navy-700/10 p-5 hover:border-naranja">
+              <Icon name={o.icon} size={26} class="text-naranja" />
+              <span class="font-semibold text-navy-900 group-hover:text-naranja">{o.nombre}</span>
+            </a>
+          ))
+        }
+        <a href="/equipos" class="group flex items-center gap-4 rounded-2xl border border-navy-700/10 p-5 hover:border-naranja">
+          <Icon name="laptop" size={26} class="text-naranja" />
+          <span class="font-semibold text-navy-900 group-hover:text-naranja">Venta de equipos</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <CtaFinal waMensaje={s.waMensaje} />
+</BaseLayout>

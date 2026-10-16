@@ -1,0 +1,32 @@
+---
+import Icon from './Icon.astro';
+import CircuitBg from './CircuitBg.astro';
+import { waLink } from '../data/site';
+
+interface Props {
+  titulo?: string;
+  texto?: string;
+  waMensaje?: string;
+}
+const {
+  titulo = '¿Tienes un proyecto o un problema tecnológico?',
+  texto = 'Cuéntamelo y te digo cómo lo resolvería. La primera conversación y el diagnóstico inicial no tienen costo.',
+  waMensaje,
+} = Astro.props;
+---
+
+<section class="px-4 py-16 sm:py-20">
+  <div class="relative isolate mx-auto max-w-6xl overflow-hidden rounded-[2rem] bg-navy-900 px-6 py-14 text-center sm:px-12 sm:py-16">
+    <CircuitBg class="-z-10 opacity-80" />
+    <h2 class="mx-auto max-w-2xl text-3xl font-bold text-white sm:text-4xl">{titulo}</h2>
+    <p class="mx-auto mt-4 max-w-xl text-lg text-white/75">{texto}</p>
+    <div class="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
+      <a href="/contacto" class="btn-primary">
+        Solicitar diagnóstico <Icon name="arrow-right" size={18} />
+      </a>
+      <a href={waLink(waMensaje)} class="btn-whatsapp" target="_blank" rel="noopener">
+        <Icon name="whatsapp" size={20} /> Escríbeme por WhatsApp
+      </a>
+    </div>
+  </div>
+</section>

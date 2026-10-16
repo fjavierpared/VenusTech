@@ -1,0 +1,46 @@
+---
+import CircuitBg from './CircuitBg.astro';
+
+interface Props {
+  banda?: string;
+  titulo: string;
+  texto?: string;
+  migas?: { name: string; path: string }[];
+}
+const { banda, titulo, texto, migas = [] } = Astro.props;
+---
+
+<section class="relative isolate overflow-hidden bg-navy-900 text-white">
+  <CircuitBg class="-z-10" />
+  <div class="container-vt py-14 sm:py-20">
+    {
+      migas.length > 0 && (
+        <nav aria-label="Ruta de navegación" class="mb-6 text-sm text-white/60">
+          <ol class="flex flex-wrap items-center gap-2">
+            <li>
+              <a href="/" class="hover:text-white">Inicio</a>
+            </li>
+            {migas.map((m, i) => (
+              <li class="flex items-center gap-2">
+                <span aria-hidden="true">/</span>
+                {i === migas.length - 1 ? (
+                  <span aria-current="page" class="text-white/90">
+                    {m.name}
+                  </span>
+                ) : (
+                  <a href={m.path} class="hover:text-white">
+                    {m.name}
+                  </a>
+                )}
+              </li>
+            ))}
+          </ol>
+        </nav>
+      )
+    }
+    {banda && <p class="banda mb-5">{banda}</p>}
+    <h1 class="max-w-4xl text-4xl leading-tight font-extrabold sm:text-5xl">{titulo}</h1>
+    {texto && <p class="mt-5 max-w-2xl text-lg leading-relaxed text-white/80 sm:text-xl">{texto}</p>}
+    <slot />
+  </div>
+</section>

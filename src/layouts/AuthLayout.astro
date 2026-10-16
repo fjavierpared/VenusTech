@@ -1,0 +1,35 @@
+---
+// Pantallas de acceso al panel: login, recuperar y restablecer contraseña
+import '@fontsource-variable/exo-2';
+import '@fontsource-variable/inter';
+import '../styles/global.css';
+import Logo from '../components/Logo.astro';
+import CircuitBg from '../components/CircuitBg.astro';
+
+interface Props {
+  titulo: string;
+}
+const { titulo } = Astro.props;
+Astro.response.headers.set('X-Robots-Tag', 'noindex, nofollow');
+Astro.response.headers.set('Cache-Control', 'no-store');
+---
+
+<!doctype html>
+<html lang="es-VE">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="referrer" content="no-referrer" />
+    <title>{titulo} · Panel VenusTech</title>
+    <link rel="icon" href="/favicon.ico" sizes="32x32" />
+  </head>
+  <body class="relative isolate flex min-h-dvh items-center justify-center bg-navy-900 px-4">
+    <CircuitBg class="-z-10" />
+    <main class="w-full max-w-sm">
+      <div class="mb-8 flex justify-center"><Logo size={48} eager /></div>
+      <slot />
+      <p class="mt-6 text-center text-sm text-white/60"><slot name="pie"><a href="/" class="hover:text-white">← Volver a la web</a></slot></p>
+    </main>
+  </body>
+</html>

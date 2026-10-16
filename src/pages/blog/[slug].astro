@@ -1,0 +1,57 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PageHero from '../../components/PageHero.astro';
+import CtaFinal from '../../components/CtaFinal.astro';
+import { fechaLarga, publicadaPorSlug, renderMarkdown } from '../../lib/publicaciones';
+import { SITE } from '../../data/site';
+
+export const prerender = false;
+
+const post = publicadaPorSlug(Astro.params.slug ?? '');
+if (!post) return new Response(null, { status: 404 });
+
+const html = renderMarkdown(post.contenido);
+const path = `/blog/${post.slug}`;
+const migas = [
+  { name: 'Blog', path: '/blog' },
+  { name: post.titulo, path },
+];
+const descripcion = post.resumen || `${post.titulo}. Publicado por VenusTech en ${SITE.city}, Venezuela.`;
+Astro.response.headers.set('Cache-Control', 'public, max-age=60');
+
+const articulo = {
+  '@context': 'https://schema.org',
+  '@type': 'BlogPosting',
+  headline: post.titulo,
+  description: descripcion,
+  url: new URL(path, SITE.url).href,
+  mainEntityOfPage: new URL(path, SITE.url).href,
+  datePublished: new Date(post.publicado_en!).toISOString(),
+  dateModified: new Date(post.actualizado_en).toISOString(),
+  author: { '@id': `${SITE.url}/#francisco` },
+  publisher: { '@id': `${SITE.url}/#negocio` },
+  inLanguage: 'es-VE',
+  ...(post.portada ? { image: new URL(post.portada, SITE.url).href } : {}),
+};
+---
+
+<BaseLayout title={post.titulo} description={descripcion} image={post.portada ?? undefined} breadcrumbs={migas} schema={[articulo]}>
+  <PageHero titulo={post.titulo} migas={migas}>
+    <p class="mt-5 text-white/70">
+      Por Ing. {SITE.owner} ·{' '}
+      <time datetime={new Date(post.publicado_en!).toISOString()}>{fechaLarga(post.publicado_en!)}</time>
+    </p>
+  </PageHero>
+
+  <article class="bg-white py-12 sm:py-16">
+    <div class="container-vt max-w-3xl">
+      {post.portada && <img src={post.portada} alt="" class="mb-10 w-full rounded-3xl" />}
+      <div class="prose-vt" set:html={html} />
+      <p class="mt-12 border-t border-slate-200 pt-6">
+        <a href="/blog" class="font-semibold text-navy-700 hover:text-naranja">← Más publicaciones</a>
+      </p>
+    </div>
+  </article>
+
+  <CtaFinal />
+</BaseLayout>

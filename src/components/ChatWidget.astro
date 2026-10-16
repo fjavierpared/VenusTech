@@ -1,0 +1,236 @@
+---
+// Asistente guiado: orienta al visitante y lo lleva a WhatsApp (o al formulario)
+// con el mensaje ya armado. Sin servicios externos ni IA: 0 KB de dependencias.
+import { Image } from 'astro:assets';
+import Icon from './Icon.astro';
+import simbolo from '../assets/logo/simbolo.png';
+import { SITE } from '../data/site';
+---
+
+<div id="vt-chat" data-wa={SITE.whatsapp} data-email={SITE.email} class="fixed right-4 bottom-4 z-[60] sm:right-6 sm:bottom-6">
+  <div
+    id="vt-chat-teaser"
+    class="absolute right-0 bottom-20 hidden w-64 rounded-2xl rounded-br-sm bg-white p-4 text-sm text-tinta shadow-2xl ring-1 ring-black/5"
+  >
+    <button type="button" class="vt-teaser-close absolute top-1.5 right-1.5 rounded-full p-1 text-gris hover:bg-slate-100" aria-label="Cerrar">
+      <Icon name="x" size={14} />
+    </button>
+    <p class="pr-4"><strong>¿Necesitas una web, soporte o cámaras?</strong> Cuéntame y te oriento en un minuto.</p>
+  </div>
+
+  <section
+    id="vt-chat-panel"
+    class="absolute right-0 bottom-20 hidden w-[calc(100vw-2rem)] max-w-sm origin-bottom-right overflow-hidden rounded-3xl bg-white shadow-2xl ring-1 ring-black/5"
+    role="dialog"
+    aria-modal="false"
+    aria-labelledby="vt-chat-title"
+  >
+    <header class="flex items-center gap-3 bg-navy-900 px-5 py-4 text-white">
+      <span class="flex size-10 items-center justify-center rounded-full bg-white/10">
+        <Image src={simbolo} alt="" width={30} densities={[1, 2]} />
+      </span>
+      <div class="flex-1">
+        <h2 id="vt-chat-title" class="font-display font-semibold">VenusTech</h2>
+        <p class="flex items-center gap-1.5 text-xs text-white/70">
+          <span class="size-2 rounded-full bg-acento"></span>
+          {SITE.responseTime}
+        </p>
+      </div>
+      <button type="button" id="vt-chat-close" class="rounded-full p-2 hover:bg-white/10" aria-label="Cerrar chat">
+        <Icon name="x" size={20} />
+      </button>
+    </header>
+    <div id="vt-chat-body" class="flex max-h-[55vh] flex-col gap-3 overflow-y-auto bg-crema/60 p-4" aria-live="polite"></div>
+  </section>
+
+  <button
+    type="button"
+    id="vt-chat-toggle"
+    class="relative flex size-16 items-center justify-center rounded-full bg-linear-to-br from-naranja to-ambar text-navy-950 shadow-xl shadow-naranja/30 transition hover:scale-105"
+    aria-controls="vt-chat-panel"
+    aria-expanded="false"
+    aria-label="Abrir chat de VenusTech"
+  >
+    <Icon name="message" size={28} strokeWidth={2} class="vt-ico-open" />
+    <Icon name="x" size={28} strokeWidth={2} class="vt-ico-close hidden" />
+    <span class="absolute -top-0.5 -right-0.5 size-4 rounded-full border-2 border-white bg-acento"></span>
+  </button>
+</div>
+
+<script>
+  type Opcion = { id: string; label: string };
+
+  const SERVICIOS: Opcion[] = [
+    { id: 'web', label: 'Página web o sistema' },
+    { id: 'soporte', label: 'Soporte técnico / servidores' },
+    { id: 'datos', label: 'Recuperar información' },
+    { id: 'camaras', label: 'Cámaras de seguridad' },
+    { id: 'equipos', label: 'Comprar un equipo' },
+    { id: 'otro', label: 'Otra consulta' },
+  ];
+  const SITUACIONES: Record<string, Opcion[]> = {
+    default: [
+      { id: 'cero', label: 'Empiezo desde cero' },
+      { id: 'mejorar', label: 'Ya tengo algo y quiero mejorarlo' },
+      { id: 'urgente', label: 'Tengo una falla urgente' },
+    ],
+    equipos: [
+      { id: 'sabe', label: 'Ya sé qué equipo quiero' },
+      { id: 'asesoria', label: 'Necesito asesoría para elegir' },
+    ],
+    datos: [
+      { id: 'formateo', label: 'Formateé por error' },
+      { id: 'virus', label: 'Fue por virus / malware' },
+      { id: 'dano', label: 'El disco no enciende o falla' },
+    ],
+  };
+
+  const root = document.getElementById('vt-chat')!;
+  const panel = document.getElementById('vt-chat-panel')!;
+  const body = document.getElementById('vt-chat-body')!;
+  const toggle = document.getElementById('vt-chat-toggle')!;
+  const teaser = document.getElementById('vt-chat-teaser')!;
+  const wa = root.dataset.wa!;
+  const email = root.dataset.email;
+
+  let servicio: Opcion | null = null;
+  let iniciado = false;
+
+  const storage = {
+    get(k: string) {
+      try {
+        return sessionStorage.getItem(k);
+      } catch {
+        return null;
+      }
+    },
+    set(k: string, v: string) {
+      try {
+        sessionStorage.setItem(k, v);
+      } catch {}
+    },
+  };
+
+  function burbuja(texto: string, deUsuario = false) {
+    const p = document.createElement('p');
+    p.className = deUsuario
+      ? 'self-end max-w-[85%] rounded-2xl rounded-br-sm bg-navy-700 px-4 py-2.5 text-sm text-white'
+      : 'self-start max-w-[85%] rounded-2xl rounded-bl-sm bg-white px-4 py-2.5 text-sm text-tinta shadow-sm';
+    p.textContent = texto;
+    body.appendChild(p);
+    body.scrollTop = body.scrollHeight;
+  }
+
+  function opciones(lista: Opcion[], alElegir: (o: Opcion) => void) {
+    const wrap = document.createElement('div');
+    wrap.className = 'flex flex-wrap gap-2';
+    for (const o of lista) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = o.label;
+      b.className =
+        'rounded-full border border-navy-700/25 bg-white px-3.5 py-2 text-sm font-medium text-navy-800 transition hover:border-naranja hover:text-naranja';
+      b.addEventListener('click', () => {
+        wrap.remove();
+        burbuja(o.label, true);
+        setTimeout(() => alElegir(o), 300);
+      });
+      wrap.appendChild(b);
+    }
+    body.appendChild(wrap);
+    body.scrollTop = body.scrollHeight;
+  }
+
+  function accion(href: string, texto: string, clase: string, externo = false) {
+    const a = document.createElement('a');
+    a.href = href;
+    a.textContent = texto;
+    a.className = `btn w-full py-2.5 text-sm ${clase}`;
+    if (externo) {
+      a.target = '_blank';
+      a.rel = 'noopener';
+    }
+    return a;
+  }
+
+  function cierre(situacion: Opcion) {
+    window.vtTrack?.('chat_completado', `${servicio?.label} · ${situacion.label}`);
+    const msg = `Hola, vengo de la web de VenusTech.\n• Me interesa: ${servicio?.label}\n• Situación: ${situacion.label}`;
+    burbuja(
+      'Perfecto. Cada proyecto lo cotizo según su alcance, así que lo mejor es que me cuentes un poco más. Te respondo con una propuesta clara. ¿Por dónde prefieres seguir?',
+    );
+    const wrap = document.createElement('div');
+    wrap.className = 'flex flex-col gap-2 pt-1';
+    wrap.appendChild(
+      accion(`https://wa.me/${wa}?text=${encodeURIComponent(msg)}`, 'Continuar por WhatsApp', 'btn-whatsapp', true),
+    );
+    if (email) {
+      wrap.appendChild(
+        accion(
+          `mailto:${email}?subject=${encodeURIComponent(`Consulta: ${servicio?.label}`)}&body=${encodeURIComponent(msg)}`,
+          'Prefiero escribir un correo',
+          'btn-outline-dark',
+        ),
+      );
+    }
+    wrap.appendChild(accion(`/contacto?servicio=${servicio?.id}#formulario`, 'Usar el formulario de contacto', 'btn-outline-dark'));
+    body.appendChild(wrap);
+    body.scrollTop = body.scrollHeight;
+  }
+
+  function iniciar() {
+    iniciado = true;
+    body.innerHTML = '';
+    burbuja('¡Hola! 👋 Soy Francisco, de VenusTech. ¿En qué te puedo ayudar?');
+    opciones(SERVICIOS, (s) => {
+      servicio = s;
+      window.vtTrack?.('chat_servicio', s.label);
+      burbuja(s.id === 'equipos' ? '¡Genial! ¿Ya sabes qué equipo necesitas?' : 'Entendido. ¿Cuál es tu situación?');
+      opciones(SITUACIONES[s.id] ?? SITUACIONES.default, cierre);
+    });
+  }
+
+  function abrir(estado: boolean) {
+    panel.classList.toggle('hidden', !estado);
+    teaser.classList.add('hidden');
+    toggle.setAttribute('aria-expanded', String(estado));
+    toggle.setAttribute('aria-label', estado ? 'Cerrar chat' : 'Abrir chat de VenusTech');
+    toggle.querySelector('.vt-ico-open')?.classList.toggle('hidden', estado);
+    toggle.querySelector('.vt-ico-close')?.classList.toggle('hidden', !estado);
+    if (estado) {
+      storage.set('vt-chat-visto', '1');
+      if (!iniciado) {
+        window.vtTrack?.('chat_abierto');
+        iniciar();
+      }
+    }
+  }
+
+  toggle.addEventListener('click', () => abrir(panel.classList.contains('hidden')));
+  document.getElementById('vt-chat-close')?.addEventListener('click', () => abrir(false));
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !panel.classList.contains('hidden')) abrir(false);
+  });
+  teaser.querySelector('.vt-teaser-close')?.addEventListener('click', () => {
+    teaser.classList.add('hidden');
+    storage.set('vt-chat-visto', '1');
+  });
+  teaser.addEventListener('click', (e) => {
+    if (!(e.target as HTMLElement).closest('.vt-teaser-close')) abrir(true);
+  });
+
+  // Cualquier enlace con data-abrir-chat abre el asistente
+  document.querySelectorAll('[data-abrir-chat]').forEach((el) =>
+    el.addEventListener('click', (e) => {
+      e.preventDefault();
+      abrir(true);
+    }),
+  );
+
+  // Saludo discreto solo en pantallas grandes, una vez por sesión
+  if (window.matchMedia('(min-width: 1024px)').matches && !storage.get('vt-chat-visto')) {
+    setTimeout(() => {
+      if (panel.classList.contains('hidden')) teaser.classList.remove('hidden');
+    }, 10000);
+  }
+</script>

@@ -1,0 +1,49 @@
+---
+// Líneas de circuito decorativas, inspiradas en la tarjeta de VenusTech
+interface Props {
+  class?: string;
+}
+const { class: className = '' } = Astro.props;
+---
+
+<svg
+  class:list={['pointer-events-none absolute inset-0 h-full w-full', className]}
+  viewBox="0 0 1200 700"
+  preserveAspectRatio="xMidYMid slice"
+  fill="none"
+  aria-hidden="true"
+>
+  <defs>
+    <radialGradient id="cb-glow" cx="78%" cy="30%" r="55%">
+      <stop offset="0" stop-color="#1d6fd1" stop-opacity="0.45"></stop>
+      <stop offset="1" stop-color="#07265a" stop-opacity="0"></stop>
+    </radialGradient>
+    <linearGradient id="cb-line" x1="0" x2="1">
+      <stop offset="0" stop-color="#8fb4e3" stop-opacity="0"></stop>
+      <stop offset="0.5" stop-color="#8fb4e3" stop-opacity="0.35"></stop>
+      <stop offset="1" stop-color="#8fb4e3" stop-opacity="0"></stop>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="700" fill="url(#cb-glow)"></rect>
+  <g stroke="url(#cb-line)" stroke-width="1.5">
+    <path d="M0 120 H260 l40 40 H520 l30 -30 H760"></path>
+    <path d="M1200 210 H980 l-40 40 H760 l-30 30 H560"></path>
+    <path d="M0 520 H180 l50 -50 H420 l40 40 H640"></path>
+    <path d="M1200 600 H900 l-60 -60 H700"></path>
+    <path d="M820 0 V90 l40 40 V260"></path>
+    <path d="M340 700 V600 l-30 -30 V480"></path>
+  </g>
+  <g fill="#8fb4e3" fill-opacity="0.5">
+    <circle cx="760" cy="130" r="4"></circle>
+    <circle cx="560" cy="280" r="4"></circle>
+    <circle cx="640" cy="510" r="4"></circle>
+    <circle cx="700" cy="540" r="4"></circle>
+    <circle cx="860" cy="260" r="4"></circle>
+    <circle cx="310" cy="480" r="4"></circle>
+  </g>
+  <g fill="#06a7a1" fill-opacity="0.55">
+    <rect x="1040" y="380" width="14" height="14"></rect>
+    <rect x="1070" y="410" width="8" height="8"></rect>
+    <rect x="120" y="260" width="10" height="10"></rect>
+  </g>
+</svg>

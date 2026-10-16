@@ -1,0 +1,23 @@
+services:
+  web:
+    build:
+      context: .
+      args:
+        SITE_URL: ${SITE_URL:?Define SITE_URL en el archivo .env}
+    image: venustech-web
+    container_name: venustech-web
+    restart: unless-stopped
+    env_file: .env
+    # Solo accesible desde el propio VPS: Nginx es quien la publica a internet
+    ports:
+      - '127.0.0.1:4321:4321'
+    volumes:
+      # Base de datos SQLite + imágenes y videos subidos (¡respáldalo!)
+      - ./data:/data
+      # Llave para descifrar las claves cifradas del .env
+      - ./secretos/clave:/run/secrets/venustech_clave:ro
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'

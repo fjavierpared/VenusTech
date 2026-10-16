@@ -1,0 +1,93 @@
+---
+import Logo from './Logo.astro';
+import Icon from './Icon.astro';
+import { SITE, NAV, instagramUrl, waLink } from '../data/site';
+import { SERVICIOS } from '../data/servicios';
+
+const year = new Date().getFullYear();
+---
+
+<footer class="relative overflow-hidden bg-navy-950 text-white/75">
+  <div class="h-1 bg-linear-to-r from-naranja via-ambar to-naranja"></div>
+  <div class="container-vt grid gap-10 py-14 sm:grid-cols-2 lg:grid-cols-4">
+    <div class="sm:col-span-2 lg:col-span-1">
+      <Logo size={40} />
+      <p class="mt-4 text-sm leading-relaxed">
+        Soluciones tecnológicas completas en {SITE.city}, {SITE.country}: desarrollo web, soporte TI, servidores y
+        videovigilancia.
+      </p>
+      <p class="mt-4 font-display text-xs tracking-widest text-white/50 uppercase">
+        {SITE.legalName} · <span class="whitespace-nowrap">RIF {SITE.rif}</span>
+      </p>
+    </div>
+
+    <div>
+      <h2 class="font-display text-sm font-semibold tracking-wider text-white uppercase">Servicios</h2>
+      <ul class="mt-4 space-y-2.5 text-sm">
+        {
+          SERVICIOS.map((s) => (
+            <li>
+              <a href={`/servicios/${s.slug}`} class="hover:text-ambar">
+                {s.nombre}
+              </a>
+            </li>
+          ))
+        }
+        <li><a href="/equipos" class="hover:text-ambar">Venta de equipos</a></li>
+      </ul>
+    </div>
+
+    <div>
+      <h2 class="font-display text-sm font-semibold tracking-wider text-white uppercase">VenusTech</h2>
+      <ul class="mt-4 space-y-2.5 text-sm">
+        {
+          NAV.filter((n) => n.href !== '/servicios' && n.href !== '/equipos').map((n) => (
+            <li>
+              <a href={n.href} class="hover:text-ambar">
+                {n.label}
+              </a>
+            </li>
+          ))
+        }
+        <li><a href="/privacidad" class="hover:text-ambar">Política de privacidad</a></li>
+      </ul>
+    </div>
+
+    <div>
+      <h2 class="font-display text-sm font-semibold tracking-wider text-white uppercase">Contacto</h2>
+      <ul class="mt-4 space-y-3 text-sm">
+        <li>
+          <a href={waLink()} class="inline-flex items-center gap-2 hover:text-ambar" rel="noopener" target="_blank">
+            <Icon name="whatsapp" size={18} class="text-[#25D366]" />
+            {SITE.phoneDisplay}
+          </a>
+        </li>
+        <li>
+          <a href={instagramUrl} class="inline-flex items-center gap-2 hover:text-ambar" rel="noopener" target="_blank">
+            <Icon name="instagram" size={18} class="text-ambar" />
+            @{SITE.instagram}
+          </a>
+        </li>
+        {
+          SITE.email && (
+            <li>
+              <a href={`mailto:${SITE.email}`} class="inline-flex items-center gap-2 hover:text-ambar">
+                <Icon name="mail" size={18} class="text-ambar" />
+                {SITE.email}
+              </a>
+            </li>
+          )
+        }
+        <li class="inline-flex items-center gap-2">
+          <Icon name="map-pin" size={18} class="text-ambar" />
+          {SITE.city}, {SITE.country}
+        </li>
+      </ul>
+    </div>
+  </div>
+  <div class="border-t border-white/10">
+    <p class="container-vt py-5 text-xs text-white/50">
+      © {year} {SITE.name}. Todos los derechos reservados.
+    </p>
+  </div>
+</footer>

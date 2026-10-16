@@ -1,0 +1,69 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PageHero from '../../components/PageHero.astro';
+import Icon from '../../components/Icon.astro';
+import CtaFinal from '../../components/CtaFinal.astro';
+import { SERVICIOS } from '../../data/servicios';
+import { SITE } from '../../data/site';
+
+const migas = [{ name: 'Servicios', path: '/servicios' }];
+---
+
+<BaseLayout
+  title={`Servicios de tecnología en ${SITE.city}`}
+  description="Servicios de VenusTech en Mérida: páginas web y sistemas a medida, soporte técnico e infraestructura TI, cámaras de seguridad y venta de equipos."
+  breadcrumbs={migas}
+>
+  <PageHero
+    banda="Servicios"
+    titulo="Soluciones tecnológicas completas para tu negocio"
+    texto="Diseño, implemento y mantengo. Elige el área que necesitas o escríbeme si no sabes por dónde empezar: te oriento sin compromiso."
+    migas={migas}
+  />
+
+  <section class="bg-white py-20">
+    <div class="container-vt grid gap-6">
+      {
+        SERVICIOS.map((s, i) => (
+          <article class="reveal grid gap-8 rounded-[2rem] border border-navy-700/10 bg-white p-7 shadow-sm sm:p-10 lg:grid-cols-[1fr_1.1fr]">
+            <div>
+              <span class="flex size-14 items-center justify-center rounded-2xl bg-linear-to-br from-naranja to-ambar text-navy-950">
+                <Icon name={s.icon} size={28} strokeWidth={2} />
+              </span>
+              {i === 0 && (
+                <span class="mt-5 inline-block rounded-full bg-naranja/10 px-3 py-1 text-xs font-semibold tracking-wider text-naranja uppercase">
+                  Servicio principal
+                </span>
+              )}
+              <h2 class="mt-4 text-2xl font-bold text-navy-900 sm:text-3xl">{s.nombre}</h2>
+              <p class="mt-3 text-lg leading-relaxed text-gris">{s.resumen}</p>
+              <a href={`/servicios/${s.slug}`} class="btn-primary mt-6">
+                Ver detalles <Icon name="arrow-right" size={18} />
+              </a>
+            </div>
+            <ul class="grid content-start gap-2.5">
+              {s.incluye.map((item) => (
+                <li class="flex items-start gap-3 text-tinta">
+                  <Icon name="check" size={20} class="mt-0.5 shrink-0 text-acento" strokeWidth={2.25} />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </article>
+        ))
+      }
+      <article class="reveal flex flex-col items-start gap-6 rounded-[2rem] bg-navy-900 p-7 text-white sm:flex-row sm:items-center sm:p-10">
+        <span class="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-ambar">
+          <Icon name="laptop" size={28} strokeWidth={2} />
+        </span>
+        <div class="flex-1">
+          <h2 class="text-2xl font-bold">Venta de equipos</h2>
+          <p class="mt-2 text-white/75">PC, laptops, discos, RAM, UPS, routers, impresoras y cámaras, con asesoría para elegir bien.</p>
+        </div>
+        <a href="/equipos" class="btn-primary">Ver equipos</a>
+      </article>
+    </div>
+  </section>
+
+  <CtaFinal />
+</BaseLayout>

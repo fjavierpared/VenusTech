@@ -1,0 +1,74 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import GraficoVisitas from '../../components/admin/GraficoVisitas.astro';
+import ListaBarras from '../../components/admin/ListaBarras.astro';
+import { EVENTOS, resumen } from '../../lib/analytics';
+
+export const prerender = false;
+
+const RANGOS = [7, 30, 90];
+const dias = RANGOS.includes(Number(Astro.url.searchParams.get('d'))) ? Number(Astro.url.searchParams.get('d')) : 30;
+const r = resumen(dias);
+
+const variacion = r.visitasAnt ? Math.round(((r.visitas - r.visitasAnt) / r.visitasAnt) * 100) : null;
+const tasaWhatsapp = r.visitantes ? (r.whatsapp / r.visitantes) * 100 : 0;
+
+const tarjetas = [
+  {
+    titulo: 'Visitas',
+    valor: r.visitas,
+    nota: variacion === null ? 'Sin periodo anterior' : `${variacion >= 0 ? '▲' : '▼'} ${Math.abs(variacion)} % vs. periodo anterior`,
+  },
+  { titulo: 'Visitantes únicos', valor: r.visitantes, nota: 'Personas distintas por día' },
+  { titulo: 'Clics a WhatsApp', valor: r.whatsapp, nota: `${tasaWhatsapp.toFixed(1)} clics por cada 100 visitantes` },
+  { titulo: 'Mensajes del formulario', valor: r.mensajes, nota: r.mensajesNuevos ? `${r.mensajesNuevos} sin leer` : 'Todos leídos' },
+];
+---
+
+<AdminLayout titulo="Resumen">
+  <div slot="acciones" class="flex rounded-full border border-slate-300 bg-white p-0.5 text-sm" role="group" aria-label="Periodo">
+    {
+      RANGOS.map((d) => (
+        <a
+          href={`/admin?d=${d}`}
+          aria-current={d === dias ? 'true' : undefined}
+          class:list={['rounded-full px-3 py-1', d === dias ? 'bg-navy-900 text-white' : 'text-gris hover:text-navy-900']}
+        >
+          {d} días
+        </a>
+      ))
+    }
+  </div>
+
+  <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    {
+      tarjetas.map((t) => (
+        <section class="rounded-2xl border border-slate-200 bg-white p-5">
+          <h2 class="text-sm font-medium text-gris">{t.titulo}</h2>
+          <p class="mt-2 font-display text-3xl font-bold text-navy-900 tabular-nums">{t.valor.toLocaleString('es-VE')}</p>
+          <p class="mt-1 text-xs text-gris">{t.nota}</p>
+        </section>
+      ))
+    }
+  </div>
+
+  <section class="mt-4 rounded-2xl border border-slate-200 bg-white p-5">
+    <h2 class="font-display font-semibold text-navy-900">Visitas por día</h2>
+    <p class="text-sm text-gris">Últimos {dias} días. Pasa el mouse sobre una barra para ver el detalle.</p>
+    <div class="mt-4"><GraficoVisitas serie={r.serie} /></div>
+  </section>
+
+  <div class="mt-4 grid gap-4 lg:grid-cols-2">
+    <ListaBarras titulo="Páginas más vistas" filas={r.paginas} />
+    <ListaBarras titulo="De dónde llegan" filas={r.referentes} />
+    <ListaBarras titulo="Interacciones" filas={r.eventos} etiquetas={EVENTOS} vacio="Aún no hay clics ni uso del chat." />
+    <ListaBarras titulo="Lo que más preguntan en el chat" filas={r.chatServicios} vacio="Nadie ha usado el chat todavía." />
+    <ListaBarras titulo="Dispositivos" filas={r.dispositivos} />
+    <ListaBarras titulo="Navegadores" filas={r.navegadores} />
+  </div>
+
+  <p class="mt-6 text-xs text-gris">
+    Analítica propia sin cookies: no se guardan IPs ni datos personales, y tus propias visitas como administrador no se
+    cuentan.
+  </p>
+</AdminLayout>

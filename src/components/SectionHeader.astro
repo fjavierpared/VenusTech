@@ -1,0 +1,20 @@
+---
+interface Props {
+  banda?: string;
+  titulo: string;
+  texto?: string;
+  centrado?: boolean;
+  oscuro?: boolean;
+  /** Nivel del encabezado (h2 por defecto) */
+  as?: 'h1' | 'h2';
+}
+const { banda, titulo, texto, centrado = false, oscuro = false, as: Tag = 'h2' } = Astro.props;
+---
+
+<div class:list={['max-w-3xl', centrado && 'mx-auto text-center']}>
+  {banda && <p class="banda mb-5">{banda}</p>}
+  <Tag class:list={['text-3xl leading-tight font-bold sm:text-4xl', oscuro ? 'text-white' : 'text-navy-900']}>
+    {titulo}
+  </Tag>
+  {texto && <p class:list={['mt-4 text-lg leading-relaxed', oscuro ? 'text-white/75' : 'text-gris']}>{texto}</p>}
+</div>

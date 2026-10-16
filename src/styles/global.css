@@ -1,0 +1,147 @@
+@import 'tailwindcss';
+
+/* Paleta tomada de la tarjeta de presentación de VenusTech */
+@theme {
+  --color-navy-950: #041a40;
+  --color-navy-900: #07265a;
+  --color-navy-800: #072d6a;
+  --color-navy-700: #0c4782;
+  --color-navy-500: #1d6fd1;
+  --color-navy-300: #8fb4e3;
+  --color-naranja: #ff6f12;
+  --color-naranja-600: #e85d05;
+  --color-ambar: #ffb300;
+  --color-acento: #06a7a1;
+  --color-crema: #fff4ea;
+  --color-tinta: #0f172a;
+  --color-gris: #475569;
+
+  --font-display: 'Exo 2 Variable', 'Exo 2', system-ui, sans-serif;
+  --font-sans: 'Inter Variable', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+@utility btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-base font-semibold transition duration-200 active:scale-[0.98];
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    @apply bg-white font-sans text-tinta antialiased;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-display tracking-tight text-balance;
+  }
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-ambar;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  .container-vt {
+    @apply mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8;
+  }
+
+  .btn-primary {
+    @apply btn bg-linear-to-r from-naranja to-ambar text-navy-950 shadow-lg shadow-naranja/25 hover:shadow-naranja/40 hover:brightness-105;
+  }
+  .btn-outline-light {
+    @apply btn border border-white/30 text-white hover:border-white hover:bg-white/10;
+  }
+  .btn-outline-dark {
+    @apply btn border border-navy-700/30 text-navy-800 hover:border-navy-700 hover:bg-navy-700/5;
+  }
+  .btn-whatsapp {
+    @apply btn bg-[#25D366] text-[#073b1d] hover:brightness-105;
+  }
+
+  /* Banda naranja inclinada, como "SERVICIOS" en la tarjeta */
+  .banda {
+    @apply relative isolate inline-block px-5 py-1.5 font-display text-sm font-bold tracking-[0.2em] text-white uppercase;
+  }
+  .banda::before {
+    content: '';
+    @apply absolute inset-0 -z-10 -skew-x-12 rounded-sm bg-linear-to-r from-naranja to-naranja-600;
+  }
+
+  .card-vidrio {
+    @apply rounded-3xl border border-white/15 bg-white/8 backdrop-blur-md;
+  }
+
+  .prose-vt {
+    @apply text-lg leading-relaxed text-gris;
+  }
+  .prose-vt h2 {
+    @apply mt-10 mb-4 text-2xl font-bold text-navy-900;
+  }
+  .prose-vt h3 {
+    @apply mt-8 mb-3 text-xl font-semibold text-navy-900;
+  }
+  .prose-vt p {
+    @apply mb-5;
+  }
+  .prose-vt ul {
+    @apply mb-5 list-disc space-y-2 pl-6 marker:text-naranja;
+  }
+  .prose-vt strong {
+    @apply text-tinta;
+  }
+  .prose-vt a {
+    @apply font-medium text-navy-700 underline underline-offset-4 hover:text-naranja;
+  }
+  .prose-vt img,
+  .prose-vt video {
+    @apply my-8 w-full rounded-2xl;
+  }
+  .prose-vt video {
+    @apply bg-black;
+  }
+  .prose-vt .video {
+    @apply relative my-8 aspect-video overflow-hidden rounded-2xl bg-black;
+  }
+  .prose-vt .video iframe {
+    @apply absolute inset-0 h-full w-full border-0;
+  }
+  .prose-vt blockquote {
+    @apply my-6 border-l-4 border-naranja pl-5 text-tinta italic;
+  }
+  .prose-vt ol {
+    @apply mb-5 list-decimal space-y-2 pl-6;
+  }
+}
+
+/* Aparición suave al hacer scroll (sin librerías) */
+@supports (animation-timeline: view()) {
+  .reveal {
+    animation: reveal linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 35%;
+  }
+  @keyframes reveal {
+    from {
+      opacity: 0;
+      transform: translateY(24px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}

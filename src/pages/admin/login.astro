@@ -1,0 +1,79 @@
+---
+import AuthLayout from '../../layouts/AuthLayout.astro';
+import {
+  adminDeSesion,
+  bloqueadoPorIntentos,
+  COOKIE_SESION,
+  guardarCookieSesion,
+  iniciarSesion,
+  ipDe,
+} from '../../lib/auth';
+import { db } from '../../lib/db';
+
+export const prerender = false;
+
+const volverParam = Astro.url.searchParams.get('volver') ?? '/admin';
+// Solo se permite volver a rutas internas del panel
+const volver = /^\/admin(\/[\w\-/]*)?$/.test(volverParam) ? volverParam : '/admin';
+
+if (adminDeSesion(Astro.cookies.get(COOKIE_SESION)?.value)) return Astro.redirect(volver);
+
+const { n: hayAdmin } = db.prepare('SELECT COUNT(*) n FROM admins').get() as { n: number };
+let error = '';
+const restablecida = Astro.url.searchParams.has('restablecida');
+
+if (Astro.request.method === 'POST') {
+  const ip = ipDe(Astro.request, Astro.clientAddress);
+  if (bloqueadoPorIntentos(ip)) {
+    error = 'Demasiados intentos fallidos. Espera 15 minutos e inténtalo de nuevo.';
+  } else {
+    const form = await Astro.request.formData();
+    const token = iniciarSesion(String(form.get('usuario') ?? '').trim(), String(form.get('password') ?? ''), ip);
+    if (token) {
+      guardarCookieSesion(Astro.cookies, token);
+      return Astro.redirect(volver);
+    }
+    error = 'Usuario o contraseña incorrectos.';
+  }
+}
+---
+
+<AuthLayout titulo="Ingresar">
+  <form method="post" class="rounded-3xl bg-white p-7 shadow-2xl">
+    <h1 class="text-2xl font-bold text-navy-900">Panel de control</h1>
+    <p class="mt-1 text-sm text-gris">Acceso exclusivo del administrador.</p>
+    {
+      !hayAdmin && (
+        <p class="mt-4 rounded-xl bg-ambar/15 p-3 text-sm text-navy-900">
+          Aún no hay administrador. Créalo en el servidor con <code class="font-semibold">npm run admin:crear</code>.
+        </p>
+      )
+    }
+    {restablecida && <p class="mt-4 rounded-xl bg-acento/10 p-3 text-sm font-medium text-navy-900">Contraseña cambiada. Ya puedes ingresar.</p>}
+    {error && <p class="mt-4 rounded-xl bg-red-50 p-3 text-sm font-medium text-red-700" role="alert">{error}</p>}
+    <label class="mt-6 block">
+      <span class="text-sm font-semibold text-navy-900">Usuario</span>
+      <input
+        name="usuario"
+        required
+        autocomplete="username"
+        autofocus
+        class="mt-1.5 w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-navy-700 focus:ring-2 focus:ring-navy-700/20"
+      />
+    </label>
+    <label class="mt-4 block">
+      <span class="text-sm font-semibold text-navy-900">Contraseña</span>
+      <input
+        name="password"
+        type="password"
+        required
+        autocomplete="current-password"
+        class="mt-1.5 w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-navy-700 focus:ring-2 focus:ring-navy-700/20"
+      />
+    </label>
+    <button class="btn-primary mt-6 w-full">Ingresar</button>
+    <p class="mt-4 text-center text-sm">
+      <a href="/admin/recuperar" class="text-navy-700 hover:text-naranja">¿Olvidaste tu contraseña?</a>
+    </p>
+  </form>
+</AuthLayout>

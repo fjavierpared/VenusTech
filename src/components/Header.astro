@@ -1,0 +1,87 @@
+---
+import Logo from './Logo.astro';
+import Icon from './Icon.astro';
+import { NAV } from '../data/site';
+
+const path = Astro.url.pathname.replace(/\/$/, '') || '/';
+const isActive = (href: string) => path === href || path.startsWith(`${href}/`);
+---
+
+<header class="sticky top-0 z-50 border-b border-white/10 bg-navy-950/90 backdrop-blur-md">
+  <nav class="container-vt flex h-16 items-center justify-between gap-4 xl:h-20" aria-label="Principal">
+    <a href="/" class="shrink-0" aria-label="VenusTech, ir al inicio">
+      <Logo size={38} eager />
+    </a>
+
+    <ul class="hidden items-center gap-1 xl:flex">
+      {
+        NAV.map((item) => (
+          <li>
+            <a
+              href={item.href}
+              aria-current={isActive(item.href) ? 'page' : undefined}
+              class:list={[
+                'rounded-full px-4 py-2 text-sm font-medium transition',
+                isActive(item.href) ? 'bg-white/10 text-white' : 'text-white/75 hover:text-white',
+              ]}
+            >
+              {item.label}
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+
+    <div class="flex items-center gap-2">
+      <a href="/contacto" class="btn-primary hidden px-5 py-2.5 text-sm sm:inline-flex">Solicitar diagnóstico</a>
+      <button
+        id="menu-btn"
+        type="button"
+        class="inline-flex size-11 items-center justify-center rounded-full text-white hover:bg-white/10 xl:hidden"
+        aria-controls="menu-movil"
+        aria-expanded="false"
+        aria-label="Abrir menú"
+      >
+        <Icon name="menu" class="menu-abrir" />
+        <Icon name="x" class="menu-cerrar hidden" />
+      </button>
+    </div>
+  </nav>
+
+  <div id="menu-movil" class="hidden border-t border-white/10 xl:hidden">
+    <ul class="container-vt flex flex-col py-3">
+      {
+        NAV.map((item) => (
+          <li>
+            <a
+              href={item.href}
+              aria-current={isActive(item.href) ? 'page' : undefined}
+              class:list={[
+                'block rounded-xl px-3 py-3 text-base font-medium',
+                isActive(item.href) ? 'bg-white/10 text-white' : 'text-white/80',
+              ]}
+            >
+              {item.label}
+            </a>
+          </li>
+        ))
+      }
+      <li class="pt-2 pb-1">
+        <a href="/contacto" class="btn-primary w-full">Solicitar diagnóstico</a>
+      </li>
+    </ul>
+  </div>
+</header>
+
+<script>
+  const btn = document.getElementById('menu-btn');
+  const menu = document.getElementById('menu-movil');
+  btn?.addEventListener('click', () => {
+    const open = btn.getAttribute('aria-expanded') === 'true';
+    btn.setAttribute('aria-expanded', String(!open));
+    btn.setAttribute('aria-label', open ? 'Abrir menú' : 'Cerrar menú');
+    menu?.classList.toggle('hidden', open);
+    btn.querySelector('.menu-abrir')?.classList.toggle('hidden', !open);
+    btn.querySelector('.menu-cerrar')?.classList.toggle('hidden', open);
+  });
+</script>

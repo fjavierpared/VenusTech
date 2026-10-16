@@ -1,0 +1,11 @@
+node_modules
+dist
+.astro
+data
+secretos
+.env
+.env.*
+.git
+diseologovenustech
+deploy
+*.md

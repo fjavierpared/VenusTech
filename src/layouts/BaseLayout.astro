@@ -1,0 +1,209 @@
+---
+import '@fontsource-variable/exo-2';
+import '@fontsource-variable/inter';
+import '../styles/global.css';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import ChatWidget from '../components/ChatWidget.astro';
+import Tracker from '../components/Tracker.astro';
+import { SITE, instagramUrl } from '../data/site';
+import { SERVICIOS } from '../data/servicios';
+
+interface Breadcrumb {
+  name: string;
+  path: string;
+}
+
+interface Props {
+  /** Título de la página (sin la marca; se agrega " | VenusTech") */
+  title: string;
+  description: string;
+  /** Imagen para redes sociales (ruta en /public) */
+  image?: string;
+  /** Datos estructurados adicionales de la página */
+  schema?: Record<string, unknown>[];
+  breadcrumbs?: Breadcrumb[];
+  noindex?: boolean;
+  /** true en la home: el título no lleva sufijo */
+  fullTitle?: boolean;
+}
+
+const {
+  title,
+  description,
+  image = '/og-venustech.jpg',
+  schema = [],
+  breadcrumbs = [],
+  noindex = false,
+  fullTitle = false,
+} = Astro.props;
+
+const pageTitle = fullTitle ? title : `${title} | ${SITE.name}`;
+const canonical = new URL(Astro.url.pathname, Astro.site ?? SITE.url).href;
+const imageUrl = new URL(image, Astro.site ?? SITE.url).href;
+const base = SITE.url;
+
+// Negocio local: ayuda a Google a mostrar VenusTech en búsquedas de Mérida y en Maps
+const negocio = {
+  '@context': 'https://schema.org',
+  '@type': ['ProfessionalService', 'LocalBusiness'],
+  '@id': `${base}/#negocio`,
+  name: SITE.name,
+  alternateName: ['Venus Tech', 'Venus Tech F.P.'],
+  legalName: SITE.legalName,
+  description: SITE.description,
+  url: base,
+  logo: `${base}/favicon-512.png`,
+  image: `${base}/og-venustech.jpg`,
+  telephone: SITE.phone,
+  ...(SITE.email ? { email: SITE.email } : {}),
+  taxID: SITE.rif,
+  priceRange: '$$',
+  address: {
+    '@type': 'PostalAddress',
+    addressLocality: SITE.city,
+    addressRegion: SITE.region,
+    addressCountry: SITE.countryCode,
+  },
+  geo: { '@type': 'GeoCoordinates', latitude: SITE.geo.lat, longitude: SITE.geo.lng },
+  areaServed: [
+    { '@type': 'City', name: 'Mérida, Venezuela' },
+    { '@type': 'Country', name: 'Venezuela' },
+  ],
+  sameAs: [instagramUrl],
+  founder: { '@id': `${base}/#francisco` },
+  contactPoint: {
+    '@type': 'ContactPoint',
+    telephone: SITE.phone,
+    contactType: 'customer service',
+    areaServed: 'VE',
+    availableLanguage: ['es'],
+  },
+  knowsAbout: [
+    'Desarrollo web',
+    'Sistemas a medida',
+    'Linux',
+    'Proxmox',
+    'Windows Server',
+    'Redes',
+    'Videovigilancia',
+    'Recuperación de datos',
+    'AutoCAD',
+    'Revit',
+    'SketchUp',
+  ],
+  hasOfferCatalog: {
+    '@type': 'OfferCatalog',
+    name: 'Servicios de VenusTech',
+    itemListElement: [
+      ...SERVICIOS.map((s) => ({
+        '@type': 'Offer',
+        itemOffered: { '@type': 'Service', name: s.nombre, url: `${base}/servicios/${s.slug}` },
+      })),
+      {
+        '@type': 'Offer',
+        itemOffered: { '@type': 'Service', name: 'Venta de equipos de computación', url: `${base}/equipos` },
+      },
+    ],
+  },
+};
+
+const persona = {
+  '@context': 'https://schema.org',
+  '@type': 'Person',
+  '@id': `${base}/#francisco`,
+  name: SITE.owner,
+  jobTitle: SITE.ownerTitle,
+  worksFor: { '@id': `${base}/#negocio` },
+  url: `${base}/sobre-venustech`,
+  sameAs: [instagramUrl],
+};
+
+const sitioWeb = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  '@id': `${base}/#web`,
+  name: SITE.name,
+  url: base,
+  inLanguage: 'es-VE',
+  publisher: { '@id': `${base}/#negocio` },
+};
+
+const migas = breadcrumbs.length
+  ? [
+      {
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: [{ name: 'Inicio', path: '/' }, ...breadcrumbs].map((b, i) => ({
+          '@type': 'ListItem',
+          position: i + 1,
+          name: b.name,
+          item: new URL(b.path, base).href,
+        })),
+      },
+    ]
+  : [];
+
+const jsonLd = [negocio, persona, sitioWeb, ...migas, ...schema];
+---
+
+<!doctype html>
+<html lang="es-VE">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{pageTitle}</title>
+    <meta name="description" content={description} />
+    <meta name="keywords" content={SITE.keywords.join(', ')} />
+    <meta name="author" content={`${SITE.name} — ${SITE.owner}`} />
+    <meta name="robots" content={noindex ? 'noindex, follow' : 'index, follow, max-image-preview:large'} />
+    <link rel="canonical" href={canonical} />
+    <meta name="generator" content={Astro.generator} />
+
+    <!-- Ubicación (SEO local) -->
+    <meta name="geo.region" content="VE-L" />
+    <meta name="geo.placename" content="Mérida, Venezuela" />
+    <meta name="geo.position" content={`${SITE.geo.lat};${SITE.geo.lng}`} />
+    <meta name="ICBM" content={`${SITE.geo.lat}, ${SITE.geo.lng}`} />
+
+    <!-- Open Graph (WhatsApp, Facebook, Instagram, LinkedIn) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content={SITE.name} />
+    <meta property="og:locale" content="es_VE" />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={imageUrl} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="VenusTech — Desarrollo web, soporte TI y videovigilancia en Mérida" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={pageTitle} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={imageUrl} />
+
+    <!-- Íconos y app -->
+    <link rel="icon" href="/favicon.ico" sizes="32x32" />
+    <link rel="icon" href="/favicon-512.png" type="image/png" sizes="512x512" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta name="theme-color" content="#07265A" />
+    <link rel="sitemap" href="/sitemap-index.xml" />
+
+    <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+  </head>
+  <body class="flex min-h-dvh flex-col">
+    <a
+      href="#contenido"
+      class="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] focus:rounded-full focus:bg-white focus:px-4 focus:py-2 focus:text-navy-900"
+      >Saltar al contenido</a
+    >
+    <Header />
+    <main id="contenido" class="flex-1">
+      <slot />
+    </main>
+    <Footer />
+    <ChatWidget />
+    <Tracker />
+  </body>
+</html>

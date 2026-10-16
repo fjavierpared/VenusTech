@@ -1,0 +1,332 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { eliminar, guardar, porId, type Publicacion } from '../../../lib/publicaciones';
+import { listar, urlMedio } from '../../../lib/medios';
+
+export const prerender = false;
+
+const esNueva = Astro.params.id === 'nueva';
+const actual = esNueva ? undefined : porId(Number(Astro.params.id));
+if (!esNueva && !actual) return Astro.redirect('/admin/publicaciones');
+
+let error = '';
+let valores: Partial<Publicacion> = actual ?? { estado: 'borrador' };
+
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  if (form.get('accion') === 'eliminar' && actual) {
+    eliminar(actual.id);
+    return Astro.redirect('/admin/publicaciones');
+  }
+  const datos = {
+    id: actual?.id,
+    titulo: String(form.get('titulo') ?? ''),
+    slug: String(form.get('slug') ?? ''),
+    resumen: String(form.get('resumen') ?? ''),
+    contenido: String(form.get('contenido') ?? ''),
+    portada: String(form.get('portada') ?? '') || null,
+    estado: form.get('accion') === 'publicar' ? ('publicado' as const) : ('borrador' as const),
+  };
+  const r = guardar(datos);
+  if (r.ok) return Astro.redirect(`/admin/publicaciones/${r.id}?guardado=${datos.estado}`);
+  error = r.error;
+  valores = { ...valores, ...datos };
+}
+
+const guardado = Astro.url.searchParams.get('guardado');
+const medios = listar();
+---
+
+<AdminLayout titulo={esNueva ? 'Nueva publicación' : 'Editar publicación'}>
+  <a slot="acciones" href="/admin/publicaciones" class="text-sm text-gris hover:text-navy-900">← Volver</a>
+
+  {
+    guardado && (
+      <p class="mb-4 rounded-xl bg-acento/10 p-3 text-sm font-medium text-navy-900">
+        {guardado === 'publicado' ? (
+          <>
+            Publicada.{' '}
+            <a href={`/blog/${valores.slug}`} target="_blank" class="underline">
+              Verla en la web →
+            </a>
+          </>
+        ) : (
+          'Borrador guardado. No es visible en la web hasta que la publiques.'
+        )}
+      </p>
+    )
+  }
+  {error && <p class="mb-4 rounded-xl bg-red-50 p-3 text-sm font-medium text-red-700" role="alert">{error}</p>}
+
+  <form method="post" id="editor" class="grid gap-5 xl:grid-cols-[1fr_20rem]">
+    <div class="space-y-5">
+      <section class="rounded-2xl border border-slate-200 bg-white p-5">
+        <label class="block">
+          <span class="text-sm font-semibold text-navy-900">Título</span>
+          <input
+            name="titulo"
+            id="titulo"
+            required
+            value={valores.titulo}
+            maxlength="160"
+            placeholder="Ej.: Instalamos 8 cámaras con acceso seguro en un comercio de Mérida"
+            class="mt-1.5 w-full rounded-xl border border-slate-300 px-4 py-3 font-display text-lg font-semibold outline-none focus:border-navy-700"
+          />
+        </label>
+        <label class="mt-4 block">
+          <span class="text-sm font-semibold text-navy-900">URL</span>
+          <div class="mt-1.5 flex items-center rounded-xl border border-slate-300 focus-within:border-navy-700">
+            <span class="pl-4 text-sm text-gris">/blog/</span>
+            <input name="slug" id="slug" value={valores.slug} placeholder="se-genera-del-titulo" class="w-full rounded-xl px-1 py-2.5 text-sm outline-none" />
+          </div>
+        </label>
+      </section>
+
+      <section class="rounded-2xl border border-slate-200 bg-white">
+        <div class="flex flex-wrap items-center gap-1 border-b border-slate-200 p-2" role="toolbar" aria-label="Formato">
+          <button type="button" data-md="## " class="vt-tb">Título</button>
+          <button type="button" data-md="**" data-envolver class="vt-tb font-bold">N</button>
+          <button type="button" data-md="*" data-envolver class="vt-tb italic">C</button>
+          <button type="button" data-md="- " class="vt-tb">• Lista</button>
+          <button type="button" data-md="> " class="vt-tb">“ Cita</button>
+          <button type="button" id="tb-enlace" class="vt-tb">Enlace</button>
+          <button type="button" id="tb-medio" class="vt-tb">Imagen / video</button>
+          <button type="button" id="tb-youtube" class="vt-tb">YouTube</button>
+          <div class="ml-auto flex rounded-lg bg-slate-100 p-0.5 text-sm">
+            <button type="button" id="ver-editar" class="rounded-md bg-white px-3 py-1 shadow-sm">Escribir</button>
+            <button type="button" id="ver-previa" class="rounded-md px-3 py-1 text-gris">Vista previa</button>
+          </div>
+        </div>
+        <textarea
+          name="contenido"
+          id="contenido"
+          rows="22"
+          placeholder="Escribe aquí. Usa la barra de arriba para dar formato e insertar imágenes o videos."
+          class="block w-full resize-y rounded-b-2xl p-5 font-mono text-sm leading-relaxed outline-none">{valores.contenido}</textarea
+        >
+        <div id="previa" class="prose-vt hidden min-h-[30rem] p-6"></div>
+      </section>
+    </div>
+
+    <aside class="space-y-5">
+      <section class="rounded-2xl border border-slate-200 bg-white p-5">
+        <p class="text-sm text-gris">
+          Estado:{' '}
+          <strong class="text-navy-900">{valores.estado === 'publicado' ? 'Publicada' : 'Borrador'}</strong>
+        </p>
+        <div class="mt-4 grid gap-2">
+          <button name="accion" value="publicar" class="btn-primary py-2.5">
+            {valores.estado === 'publicado' ? 'Guardar cambios' : 'Publicar'}
+          </button>
+          <button name="accion" value="borrador" class="btn-outline-dark py-2.5">
+            {valores.estado === 'publicado' ? 'Pasar a borrador' : 'Guardar borrador'}
+          </button>
+        </div>
+      </section>
+
+      <section class="rounded-2xl border border-slate-200 bg-white p-5">
+        <label class="block">
+          <span class="text-sm font-semibold text-navy-900">Resumen para Google</span>
+          <textarea
+            name="resumen"
+            id="resumen"
+            rows="4"
+            maxlength="300"
+            class="mt-1.5 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-navy-700"
+            placeholder="1 o 2 frases que expliquen la publicación.">{valores.resumen}</textarea
+          >
+        </label>
+        <p class="mt-1 text-xs text-gris"><span id="cuenta">0</span>/160 recomendado</p>
+      </section>
+
+      <section class="rounded-2xl border border-slate-200 bg-white p-5">
+        <span class="text-sm font-semibold text-navy-900">Imagen de portada</span>
+        <input type="hidden" name="portada" id="portada" value={valores.portada ?? ''} />
+        <div id="portada-vista" class="mt-2 aspect-video overflow-hidden rounded-xl bg-slate-100">
+          {valores.portada && <img src={valores.portada} alt="" class="h-full w-full object-cover" />}
+        </div>
+        <div class="mt-2 flex gap-2">
+          <button type="button" id="elegir-portada" class="flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm">Elegir</button>
+          <button type="button" id="quitar-portada" class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm">Quitar</button>
+        </div>
+      </section>
+
+      {
+        actual && (
+          <button
+            name="accion"
+            value="eliminar"
+            formnovalidate
+            class="w-full rounded-xl border border-red-200 bg-white px-3 py-2.5 text-sm text-red-700"
+            onclick="return confirm('¿Eliminar esta publicación definitivamente?')"
+          >
+            Eliminar publicación
+          </button>
+        )
+      }
+    </aside>
+  </form>
+
+  <!-- Selector de la biblioteca de medios -->
+  <dialog id="biblioteca" class="m-auto w-[min(56rem,calc(100vw-2rem))] rounded-2xl p-0 backdrop:bg-navy-950/60">
+    <div class="flex items-center justify-between border-b border-slate-200 px-5 py-3">
+      <h2 class="font-display font-semibold text-navy-900">Elige un archivo</h2>
+      <button type="button" id="cerrar-biblioteca" class="rounded-full px-3 py-1 text-gris hover:bg-slate-100">Cerrar</button>
+    </div>
+    {
+      medios.length === 0 ? (
+        <p class="p-8 text-center text-gris">
+          No hay archivos. <a href="/admin/medios" class="text-navy-700 underline">Sube imágenes o videos aquí</a>.
+        </p>
+      ) : (
+        <ul class="grid max-h-[65vh] grid-cols-2 gap-3 overflow-y-auto p-5 sm:grid-cols-3 md:grid-cols-4">
+          {medios.map((m) => (
+            <li>
+              <button
+                type="button"
+                class="vt-medio block w-full overflow-hidden rounded-xl border-2 border-transparent bg-slate-100 text-left hover:border-naranja"
+                data-url={urlMedio(m.archivo)}
+                data-tipo={m.tipo}
+                data-alt={m.alt}
+              >
+                {m.tipo === 'imagen' ? (
+                  <img src={urlMedio(m.archivo)} alt="" loading="lazy" class="aspect-video w-full object-cover" />
+                ) : (
+                  <span class="flex aspect-video items-center justify-center bg-navy-900 text-sm text-white">▶ Video</span>
+                )}
+                <span class="block truncate px-2 py-1.5 text-xs text-gris">{m.nombre_original}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )
+    }
+  </dialog>
+</AdminLayout>
+
+<style>
+  @reference '../../../styles/global.css';
+  .vt-tb {
+    @apply rounded-lg px-2.5 py-1.5 text-sm text-navy-900 hover:bg-slate-100;
+  }
+</style>
+
+<script>
+  const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+  const titulo = $<HTMLInputElement>('titulo');
+  const slug = $<HTMLInputElement>('slug');
+  const contenido = $<HTMLTextAreaElement>('contenido');
+  const previa = $('previa');
+  const resumen = $<HTMLTextAreaElement>('resumen');
+  const biblioteca = $<HTMLDialogElement>('biblioteca');
+  const portada = $<HTMLInputElement>('portada');
+  const portadaVista = $('portada-vista');
+
+  // URL automática a partir del título (mientras no la edites a mano)
+  let slugManual = Boolean(slug.value);
+  const slugify = (t: string) =>
+    t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80);
+  titulo.addEventListener('input', () => {
+    if (!slugManual) slug.value = slugify(titulo.value);
+  });
+  slug.addEventListener('input', () => (slugManual = true));
+
+  const cuenta = $('cuenta');
+  const contar = () => {
+    cuenta.textContent = String(resumen.value.length);
+    cuenta.classList.toggle('text-naranja', resumen.value.length > 160);
+  };
+  resumen.addEventListener('input', contar);
+  contar();
+
+  function insertar(antes: string, despues = '', marcador = '') {
+    const { selectionStart: a, selectionEnd: b, value } = contenido;
+    const sel = value.slice(a, b) || marcador;
+    contenido.setRangeText(antes + sel + despues, a, b, 'end');
+    contenido.focus();
+  }
+
+  document.querySelectorAll<HTMLButtonElement>('[data-md]').forEach((btn) =>
+    btn.addEventListener('click', () => {
+      const md = btn.dataset.md!;
+      if (btn.hasAttribute('data-envolver')) return insertar(md, md, 'texto');
+      // Prefijos de línea: se insertan al inicio de la línea actual
+      const inicio = contenido.value.lastIndexOf('\n', contenido.selectionStart - 1) + 1;
+      contenido.setRangeText(md, inicio, inicio, 'end');
+      contenido.focus();
+    }),
+  );
+
+  $('tb-enlace').addEventListener('click', () => {
+    const url = prompt('Dirección del enlace (https://… o /contacto):');
+    if (url) insertar('[', `](${url})`, 'texto del enlace');
+  });
+
+  $('tb-youtube').addEventListener('click', () => {
+    const url = prompt('Pega el enlace del video de YouTube:');
+    const id = url?.match(/(?:youtu\.be\/|v=|shorts\/|embed\/)([\w-]{11})/)?.[1];
+    if (!url) return;
+    if (!id) return alert('No reconozco ese enlace de YouTube.');
+    insertar(
+      `\n\n<div class="video"><iframe src="https://www.youtube-nocookie.com/embed/${id}" title="Video de YouTube" loading="lazy" allowfullscreen></iframe></div>\n\n`,
+    );
+  });
+
+  // Biblioteca: para insertar en el contenido o elegir portada
+  let modo: 'contenido' | 'portada' = 'contenido';
+  $('tb-medio').addEventListener('click', () => {
+    modo = 'contenido';
+    biblioteca.showModal();
+  });
+  $('elegir-portada').addEventListener('click', () => {
+    modo = 'portada';
+    biblioteca.showModal();
+  });
+  $('cerrar-biblioteca').addEventListener('click', () => biblioteca.close());
+  $('quitar-portada').addEventListener('click', () => {
+    portada.value = '';
+    portadaVista.innerHTML = '';
+  });
+  document.querySelectorAll<HTMLButtonElement>('.vt-medio').forEach((b) =>
+    b.addEventListener('click', () => {
+      const { url, tipo, alt } = b.dataset;
+      if (modo === 'portada') {
+        if (tipo !== 'imagen') return alert('La portada debe ser una imagen.');
+        portada.value = url!;
+        portadaVista.innerHTML = `<img src="${url}" alt="" class="h-full w-full object-cover">`;
+      } else if (tipo === 'imagen') {
+        insertar(`\n\n![${alt || 'Descripción de la imagen'}](${url})\n\n`);
+      } else {
+        insertar(`\n\n<video src="${url}" controls preload="metadata"></video>\n\n`);
+      }
+      biblioteca.close();
+    }),
+  );
+
+  // Vista previa con el mismo motor que usa la web
+  const verEditar = $('ver-editar');
+  const verPrevia = $('ver-previa');
+  function pestaña(previaActiva: boolean) {
+    contenido.classList.toggle('hidden', previaActiva);
+    previa.classList.toggle('hidden', !previaActiva);
+    verPrevia.classList.toggle('bg-white', previaActiva);
+    verPrevia.classList.toggle('shadow-sm', previaActiva);
+    verEditar.classList.toggle('bg-white', !previaActiva);
+    verEditar.classList.toggle('shadow-sm', !previaActiva);
+  }
+  verEditar.addEventListener('click', () => pestaña(false));
+  verPrevia.addEventListener('click', async () => {
+    pestaña(true);
+    previa.innerHTML = '<p>Cargando…</p>';
+    const r = await fetch('/api/admin/previa', { method: 'POST', body: contenido.value, headers: { 'Content-Type': 'text/plain' } });
+    previa.innerHTML = r.ok ? await r.text() : '<p>No se pudo generar la vista previa.</p>';
+  });
+
+  // Aviso si sales con cambios sin guardar
+  let cambios = false;
+  document.getElementById('editor')!.addEventListener('input', () => (cambios = true));
+  document.getElementById('editor')!.addEventListener('submit', () => (cambios = false));
+  window.addEventListener('beforeunload', (e) => {
+    if (cambios) e.preventDefault();
+  });
+</script>

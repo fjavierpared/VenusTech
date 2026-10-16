@@ -1,0 +1,87 @@
+---
+import '@fontsource-variable/exo-2';
+import '@fontsource-variable/inter';
+import '../styles/global.css';
+import Logo from '../components/Logo.astro';
+import Icon, { type IconName } from '../components/Icon.astro';
+import { db } from '../lib/db';
+
+interface Props {
+  titulo: string;
+}
+const { titulo } = Astro.props;
+const { n: nuevos } = db.prepare("SELECT COUNT(*) n FROM mensajes WHERE estado = 'nuevo'").get() as { n: number };
+
+const path = Astro.url.pathname.replace(/\/$/, '') || '/admin';
+const nav: { href: string; label: string; icon: IconName; badge?: number }[] = [
+  { href: '/admin', label: 'Resumen', icon: 'layout' },
+  { href: '/admin/mensajes', label: 'Mensajes', icon: 'mail', badge: nuevos },
+  { href: '/admin/publicaciones', label: 'Publicaciones', icon: 'file-text' },
+  { href: '/admin/medios', label: 'Imágenes y videos', icon: 'layers' },
+];
+const activo = (href: string) => (href === '/admin' ? path === '/admin' : path.startsWith(href));
+---
+
+<!doctype html>
+<html lang="es-VE">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>{titulo} · Panel VenusTech</title>
+    <link rel="icon" href="/favicon.ico" sizes="32x32" />
+  </head>
+  <body class="min-h-dvh bg-slate-100 lg:flex">
+    <aside class="bg-navy-950 text-white lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col">
+      <div class="flex items-center justify-between px-5 py-4 lg:py-6">
+        <a href="/admin"><Logo size={32} eager /></a>
+      </div>
+      <nav class="flex gap-1 overflow-x-auto px-3 pb-3 lg:flex-1 lg:flex-col lg:overflow-visible" aria-label="Panel">
+        {
+          nav.map((n) => (
+            <a
+              href={n.href}
+              aria-current={activo(n.href) ? 'page' : undefined}
+              class:list={[
+                'flex shrink-0 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition',
+                activo(n.href) ? 'bg-white/10 text-white' : 'text-white/65 hover:bg-white/5 hover:text-white',
+              ]}
+            >
+              <Icon name={n.icon} size={18} />
+              {n.label}
+              {n.badge ? (
+                <span class="ml-auto rounded-full bg-naranja px-2 py-0.5 text-xs font-bold text-white">{n.badge}</span>
+              ) : null}
+            </a>
+          ))
+        }
+      </nav>
+      <div class="hidden border-t border-white/10 p-3 lg:block">
+        <a href="/" target="_blank" class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-white/65 hover:text-white">
+          <Icon name="arrow-right" size={18} /> Ver la web
+        </a>
+        <form method="post" action="/admin/salir">
+          <button class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-white/65 hover:text-white">
+            <Icon name="x" size={18} /> Cerrar sesión
+          </button>
+        </form>
+        <p class="px-3 pt-2 text-xs text-white/40">Sesión: {Astro.locals.admin?.usuario}</p>
+      </div>
+    </aside>
+
+    <main class="min-w-0 flex-1 lg:ml-64">
+      <header class="flex items-center justify-between gap-4 border-b border-slate-200 bg-white px-5 py-4 sm:px-8">
+        <h1 class="text-xl font-bold text-navy-900 sm:text-2xl">{titulo}</h1>
+        <div class="flex items-center gap-2">
+          <slot name="acciones" />
+          <form method="post" action="/admin/salir" class="lg:hidden">
+            <button class="rounded-full border border-slate-300 px-3 py-1.5 text-sm text-gris">Salir</button>
+          </form>
+        </div>
+      </header>
+      <div class="p-5 sm:p-8">
+        <slot />
+      </div>
+    </main>
+  </body>
+</html>

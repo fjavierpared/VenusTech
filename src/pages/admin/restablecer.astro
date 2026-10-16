@@ -1,0 +1,66 @@
+---
+import AuthLayout from '../../layouts/AuthLayout.astro';
+import { restablecer, tokenValido } from '../../lib/recuperacion';
+
+export const prerender = false;
+
+const token = Astro.url.searchParams.get('token') ?? '';
+let error = '';
+
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  const nueva = String(form.get('password') ?? '');
+  if (nueva !== String(form.get('repetir') ?? '')) {
+    error = 'Las contraseñas no coinciden.';
+  } else {
+    const r = restablecer(token, nueva);
+    if (r.ok) return Astro.redirect('/admin/login?restablecida');
+    error = r.error;
+  }
+}
+
+const valido = Boolean(token) && tokenValido(token) !== null;
+---
+
+<AuthLayout titulo="Nueva contraseña">
+  <div class="rounded-3xl bg-white p-7 shadow-2xl">
+    <h1 class="text-2xl font-bold text-navy-900">Nueva contraseña</h1>
+    {
+      !valido ? (
+        <div class="mt-4 space-y-4 text-sm">
+          <p class="rounded-xl bg-red-50 p-3 font-medium text-red-700">Este enlace expiró o ya se usó.</p>
+          <a href="/admin/recuperar" class="btn-primary w-full">Pedir un enlace nuevo</a>
+        </div>
+      ) : (
+        <form method="post">
+          <p class="mt-1 text-sm text-gris">Al cambiarla se cerrarán todas las sesiones abiertas.</p>
+          {error && <p class="mt-4 rounded-xl bg-red-50 p-3 text-sm font-medium text-red-700" role="alert">{error}</p>}
+          <label class="mt-6 block">
+            <span class="text-sm font-semibold text-navy-900">Nueva contraseña</span>
+            <input
+              name="password"
+              type="password"
+              required
+              minlength="12"
+              autocomplete="new-password"
+              class="mt-1.5 w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-navy-700 focus:ring-2 focus:ring-navy-700/20"
+            />
+            <span class="mt-1 block text-xs text-gris">Mínimo 12 caracteres. Una frase larga es más segura y fácil de recordar.</span>
+          </label>
+          <label class="mt-4 block">
+            <span class="text-sm font-semibold text-navy-900">Repítela</span>
+            <input
+              name="repetir"
+              type="password"
+              required
+              minlength="12"
+              autocomplete="new-password"
+              class="mt-1.5 w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-navy-700 focus:ring-2 focus:ring-navy-700/20"
+            />
+          </label>
+          <button class="btn-primary mt-6 w-full">Guardar contraseña</button>
+        </form>
+      )
+    }
+  </div>
+</AuthLayout>

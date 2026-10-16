@@ -1,0 +1,34 @@
+---
+import { Image } from 'astro:assets';
+import simbolo from '../assets/logo/simbolo.png';
+import wordmarkBlanco from '../assets/logo/wordmark-blanco.png';
+
+interface Props {
+  class?: string;
+  /** Altura del símbolo en px */
+  size?: number;
+  eager?: boolean;
+}
+const { class: className = '', size = 36, eager = false } = Astro.props;
+const loading = eager ? 'eager' : 'lazy';
+---
+
+<span class:list={['inline-flex items-center gap-2.5', className]}>
+  <Image
+    src={simbolo}
+    alt=""
+    height={size}
+    width={Math.round((size * simbolo.width) / simbolo.height)}
+    densities={[1, 2]}
+    loading={loading}
+    class="shrink-0"
+  />
+  <Image
+    src={wordmarkBlanco}
+    alt="VenusTech"
+    height={Math.round(size * 0.42)}
+    width={Math.round((size * 0.42 * wordmarkBlanco.width) / wordmarkBlanco.height)}
+    densities={[1, 2]}
+    loading={loading}
+  />
+</span>

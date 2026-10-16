@@ -1,0 +1,123 @@
+---
+import { Image } from 'astro:assets';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PageHero from '../components/PageHero.astro';
+import SectionHeader from '../components/SectionHeader.astro';
+import Icon from '../components/Icon.astro';
+import CtaFinal from '../components/CtaFinal.astro';
+import foto from '../assets/fotos/francisco.jpg';
+import { SITE, TECNOLOGIAS } from '../data/site';
+
+const migas = [{ name: 'Sobre VenusTech', path: '/sobre-venustech' }];
+
+const valores = [
+  { icon: 'search', titulo: 'Claridad', texto: 'Te explico qué pasa y qué voy a hacer, en palabras simples y sin tecnicismos innecesarios.' },
+  { icon: 'file-text', titulo: 'Documentación', texto: 'Todo lo que configuro queda documentado y en tus manos.' },
+  { icon: 'shield-check', titulo: 'Seguridad', texto: 'Cada solución nace protegida: accesos, contraseñas y respaldos bien hechos.' },
+  { icon: 'life-buoy', titulo: 'Responsabilidad', texto: 'No desaparezco después de entregar. Doy seguimiento y soporte.' },
+] as const;
+
+const experiencia = [
+  'Administración de servidores Linux (Debian, Ubuntu) y Windows',
+  'Virtualización con Proxmox',
+  'Soporte técnico a usuarios y empresas',
+  'Desarrollo de sistemas web con PHP, JavaScript, MySQL y PostgreSQL',
+  'Redes, routers y videovigilancia',
+  'Instalación de software BIM y de diseño: AutoCAD, Revit, SketchUp',
+];
+---
+
+<BaseLayout
+  title={`Sobre VenusTech | Ingeniería de sistemas en ${SITE.city}`}
+  fullTitle
+  description={`VenusTech es una empresa de tecnología en Mérida, Venezuela, fundada por el Ing. ${SITE.owner}, con ${SITE.yearsExperience} años en soporte, servidores y desarrollo web.`}
+  breadcrumbs={migas}
+>
+  <PageHero
+    banda="Sobre VenusTech"
+    titulo="Resuelvo problemas completos, no síntomas"
+    texto="VenusTech nace para ofrecer a negocios y personas de Mérida lo que normalmente no encuentran junto: un ingeniero que entiende la web, los equipos, los servidores y la seguridad como un solo sistema."
+    migas={migas}
+  />
+
+  <section class="bg-white py-20">
+    <div class="container-vt grid items-center gap-14 lg:grid-cols-[0.8fr_1.2fr]">
+      <div class="relative mx-auto w-full max-w-sm">
+        <div class="absolute -inset-3 -z-10 -rotate-3 rounded-[2rem] bg-linear-to-br from-navy-700 to-navy-900"></div>
+        <Image
+          src={foto}
+          alt={`Ing. ${SITE.owner}, fundador de VenusTech`}
+          widths={[320, 480, 640]}
+          sizes="(min-width: 1024px) 384px, 90vw"
+          class="aspect-square w-full rounded-[2rem] object-cover"
+          loading="eager"
+        />
+      </div>
+      <div class="prose-vt">
+        <h2>Hola, soy Francisco Paredes</h2>
+        <p>
+          Soy <strong>Ingeniero de Sistemas</strong> y fundador de <strong>VenusTech</strong>. Durante los últimos
+          {SITE.yearsExperience} años he trabajado en soporte técnico y administración de servidores Linux, Proxmox y
+          Windows: he visto de cerca qué pasa cuando la tecnología de un negocio se instala "a la carrera" y nadie la
+          documenta ni la mantiene.
+        </p>
+        <p>
+          Por eso trabajo distinto. Antes de tocar nada, entiendo el problema. Después diseño la solución, la implemento,
+          la pruebo contigo y te dejo todo documentado. Ya sea una página web, un sistema de facturación, un servidor o
+          un sistema de cámaras, lo trato como un proyecto de ingeniería.
+        </p>
+        <p>
+          Desarrollo sistemas web a medida, como sistemas de gestión empresarial y plataformas de operaciones que hoy
+          funcionan en entornos exigentes. Y como también administro servidores, me aseguro de que lo que construyo
+          funcione bien en el mundo real.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="bg-slate-50 py-20">
+    <div class="container-vt">
+      <SectionHeader banda="Valores" titulo="Cómo trabajo con cada cliente" centrado />
+      <div class="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        {
+          valores.map((v) => (
+            <div class="reveal rounded-3xl border border-navy-700/10 bg-white p-7">
+              <span class="flex size-12 items-center justify-center rounded-2xl bg-linear-to-br from-naranja to-ambar text-navy-950">
+                <Icon name={v.icon} size={24} strokeWidth={2} />
+              </span>
+              <h3 class="mt-5 text-lg font-bold text-navy-900">{v.titulo}</h3>
+              <p class="mt-2 leading-relaxed text-gris">{v.texto}</p>
+            </div>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <section class="bg-white py-20">
+    <div class="container-vt grid gap-10 lg:grid-cols-2">
+      <div>
+        <SectionHeader banda="Experiencia" titulo={`${SITE.yearsExperience} años resolviendo problemas tecnológicos`} />
+        <ul class="mt-8 space-y-3">
+          {
+            experiencia.map((e) => (
+              <li class="flex items-start gap-3 text-tinta">
+                <Icon name="check" size={20} class="mt-0.5 shrink-0 text-acento" strokeWidth={2.25} />
+                {e}
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+      <div class="rounded-[2rem] bg-navy-900 p-8 text-white">
+        <h2 class="font-display text-xl font-bold">Herramientas y tecnologías</h2>
+        <ul class="mt-5 flex flex-wrap gap-2">
+          {TECNOLOGIAS.map((t) => <li class="rounded-full bg-white/10 px-3.5 py-1.5 text-sm">{t}</li>)}
+        </ul>
+        <p class="mt-8 text-sm text-white/60">{SITE.legalName} · RIF {SITE.rif}</p>
+      </div>
+    </div>
+  </section>
+
+  <CtaFinal titulo="Hablemos de tu proyecto" />
+</BaseLayout>

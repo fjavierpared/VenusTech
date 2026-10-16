@@ -1,0 +1,80 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PageHero from '../../components/PageHero.astro';
+import Icon from '../../components/Icon.astro';
+import CtaFinal from '../../components/CtaFinal.astro';
+import { fechaLarga, publicadas } from '../../lib/publicaciones';
+import { SITE } from '../../data/site';
+
+// Se genera en el servidor para mostrar al instante lo que publiques desde el panel
+export const prerender = false;
+
+const posts = publicadas();
+const migas = [{ name: 'Blog', path: '/blog' }];
+Astro.response.headers.set('Cache-Control', 'public, max-age=60');
+
+const blog = {
+  '@context': 'https://schema.org',
+  '@type': 'Blog',
+  name: 'Blog de VenusTech',
+  url: new URL('/blog', SITE.url).href,
+  publisher: { '@id': `${SITE.url}/#negocio` },
+  blogPost: posts.slice(0, 20).map((p) => ({
+    '@type': 'BlogPosting',
+    headline: p.titulo,
+    url: new URL(`/blog/${p.slug}`, SITE.url).href,
+    datePublished: new Date(p.publicado_en!).toISOString(),
+  })),
+};
+---
+
+<BaseLayout
+  title={`Blog: trabajos, consejos y tecnología en ${SITE.city}`}
+  description="Trabajos recientes, consejos de tecnología y novedades de VenusTech: páginas web, soporte técnico, servidores y cámaras de seguridad en Mérida."
+  breadcrumbs={migas}
+  schema={[blog]}
+>
+  <PageHero banda="Blog" titulo="Trabajos, consejos y novedades" texto="Lo que estoy haciendo y lo que aprendo en cada proyecto, explicado en claro." migas={migas} />
+
+  <section class="bg-white py-16 sm:py-20">
+    <div class="container-vt">
+      {
+        posts.length === 0 ? (
+          <p class="py-10 text-center text-lg text-gris">Muy pronto publicaré aquí los primeros trabajos y consejos.</p>
+        ) : (
+          <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {posts.map((p) => (
+              <article class="group relative flex flex-col overflow-hidden rounded-3xl border border-navy-700/10 bg-white shadow-sm transition hover:shadow-lg">
+                <div class="aspect-video bg-navy-900">
+                  {p.portada ? (
+                    <img src={p.portada} alt="" loading="lazy" class="h-full w-full object-cover" />
+                  ) : (
+                    <div class="flex h-full items-center justify-center text-ambar">
+                      <Icon name="file-text" size={40} />
+                    </div>
+                  )}
+                </div>
+                <div class="flex flex-1 flex-col p-6">
+                  <time class="text-sm text-gris" datetime={new Date(p.publicado_en!).toISOString()}>
+                    {fechaLarga(p.publicado_en!)}
+                  </time>
+                  <h2 class="mt-2 text-xl font-bold text-navy-900">
+                    <a href={`/blog/${p.slug}`} class="after:absolute after:inset-0 group-hover:text-navy-700">
+                      {p.titulo}
+                    </a>
+                  </h2>
+                  {p.resumen && <p class="mt-2 line-clamp-3 flex-1 leading-relaxed text-gris">{p.resumen}</p>}
+                  <span class="mt-4 inline-flex items-center gap-2 font-semibold text-navy-700 group-hover:text-naranja">
+                    Leer <Icon name="arrow-right" size={18} />
+                  </span>
+                </div>
+              </article>
+            ))}
+          </div>
+        )
+      }
+    </div>
+  </section>
+
+  <CtaFinal />
+</BaseLayout>

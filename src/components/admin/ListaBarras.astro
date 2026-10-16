@@ -1,0 +1,40 @@
+---
+// Lista con barra proporcional: para "top" de páginas, referentes, dispositivos, etc.
+interface Props {
+  titulo: string;
+  filas: { etiqueta: string; n: number }[];
+  vacio?: string;
+  etiquetas?: Record<string, string>;
+}
+const { titulo, filas, vacio = 'Sin datos todavía.', etiquetas = {} } = Astro.props;
+const max = Math.max(...filas.map((f) => f.n), 1);
+const total = filas.reduce((a, f) => a + f.n, 0);
+---
+
+<section class="rounded-2xl border border-slate-200 bg-white p-5">
+  <h2 class="font-display font-semibold text-navy-900">{titulo}</h2>
+  {
+    filas.length === 0 ? (
+      <p class="mt-4 text-sm text-gris">{vacio}</p>
+    ) : (
+      <ul class="mt-4 space-y-2.5">
+        {filas.map((f) => (
+          <li>
+            <div class="flex items-baseline justify-between gap-3 text-sm">
+              <span class="truncate text-tinta" title={f.etiqueta}>
+                {etiquetas[f.etiqueta] ?? f.etiqueta}
+              </span>
+              <span class="shrink-0 font-semibold text-navy-900 tabular-nums">
+                {f.n}
+                <span class="ml-1 font-normal text-gris">{Math.round((f.n / total) * 100)}%</span>
+              </span>
+            </div>
+            <div class="mt-1 h-1.5 rounded-full bg-slate-100">
+              <div class="h-1.5 rounded-full bg-[#1d6fd1]" style={`width:${Math.max(2, (f.n / max) * 100)}%`} />
+            </div>
+          </li>
+        ))}
+      </ul>
+    )
+  }
+</section>

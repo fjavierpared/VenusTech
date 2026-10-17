@@ -12,6 +12,12 @@ export interface Publicacion {
   publicado_en: number | null;
   creado_en: number;
   actualizado_en: number;
+  ig_compartir: number;
+  ig_texto: string;
+  ig_estado: '' | 'publicando' | 'ok' | 'error';
+  ig_error: string | null;
+  ig_permalink: string | null;
+  ig_publicado_en: number | null;
 }
 
 export function slugify(texto: string) {
@@ -61,6 +67,8 @@ export function guardar(datos: {
   contenido: string;
   portada: string | null;
   estado: 'borrador' | 'publicado';
+  ig_compartir: boolean;
+  ig_texto: string;
 }): { ok: true; id: number } | { ok: false; error: string } {
   const titulo = datos.titulo.trim().slice(0, 160);
   const slug = slugify(datos.slug || titulo);
@@ -73,20 +81,21 @@ export function guardar(datos: {
   const actual = datos.id ? porId(datos.id) : undefined;
   // La fecha de publicación se fija la primera vez que se publica
   const publicadoEn = datos.estado === 'publicado' ? (actual?.publicado_en ?? ahora) : (actual?.publicado_en ?? null);
+  const ig = [datos.ig_compartir ? 1 : 0, datos.ig_texto.trim().slice(0, 2200)] as const;
 
   if (actual) {
     db.prepare(
       `UPDATE publicaciones SET titulo = ?, slug = ?, resumen = ?, contenido = ?, portada = ?, estado = ?,
-       publicado_en = ?, actualizado_en = ? WHERE id = ?`,
-    ).run(titulo, slug, datos.resumen.trim().slice(0, 300), datos.contenido, datos.portada, datos.estado, publicadoEn, ahora, actual.id);
+       publicado_en = ?, actualizado_en = ?, ig_compartir = ?, ig_texto = ? WHERE id = ?`,
+    ).run(titulo, slug, datos.resumen.trim().slice(0, 300), datos.contenido, datos.portada, datos.estado, publicadoEn, ahora, ...ig, actual.id);
     return { ok: true, id: actual.id };
   }
   const r = db
     .prepare(
-      `INSERT INTO publicaciones (titulo, slug, resumen, contenido, portada, estado, publicado_en, creado_en, actualizado_en)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO publicaciones (titulo, slug, resumen, contenido, portada, estado, publicado_en, creado_en, actualizado_en, ig_compartir, ig_texto)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
-    .run(titulo, slug, datos.resumen.trim().slice(0, 300), datos.contenido, datos.portada, datos.estado, publicadoEn, ahora, ahora);
+    .run(titulo, slug, datos.resumen.trim().slice(0, 300), datos.contenido, datos.portada, datos.estado, publicadoEn, ahora, ahora, ...ig);
   return { ok: true, id: Number(r.lastInsertRowid) };
 }
 

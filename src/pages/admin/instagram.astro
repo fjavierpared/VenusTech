@@ -1,0 +1,210 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import Icon from '../../components/Icon.astro';
+import { config, conectar, desconectar, guardarPreferencias, PLANTILLA_POR_DEFECTO, renovarToken, textoPara } from '../../lib/instagram';
+import { db } from '../../lib/db';
+import { SITE } from '../../data/site';
+
+export const prerender = false;
+
+let error = '';
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  const accion = String(form.get('accion'));
+  if (accion === 'conectar') {
+    const r = await conectar(String(form.get('token') ?? ''));
+    if (r.ok) return Astro.redirect('/admin/instagram?ok=conectado');
+    error = r.error;
+  } else if (accion === 'desconectar') {
+    desconectar();
+    return Astro.redirect('/admin/instagram?ok=desconectado');
+  } else if (accion === 'renovar') {
+    await renovarToken(true);
+    return Astro.redirect('/admin/instagram?ok=renovado');
+  } else if (accion === 'preferencias') {
+    guardarPreferencias(form.get('auto') === '1', String(form.get('plantilla') ?? ''));
+    return Astro.redirect('/admin/instagram?ok=guardado');
+  }
+}
+
+const c = config();
+const ok = Astro.url.searchParams.get('ok');
+const MENSAJES: Record<string, string> = {
+  conectado: 'Cuenta conectada. Tus próximas publicaciones del blog pueden salir también en Instagram.',
+  desconectado: 'Instagram desconectado.',
+  renovado: 'Token renovado.',
+  guardado: 'Preferencias guardadas.',
+};
+const fecha = (ts: number) => new Intl.DateTimeFormat('es-VE', { dateStyle: 'long' }).format(ts);
+const diasRestantes = c.expira ? Math.ceil((c.expira - Date.now()) / 86_400_000) : null;
+const compartidas = db
+  .prepare("SELECT id, titulo, ig_permalink, ig_publicado_en FROM publicaciones WHERE ig_estado = 'ok' ORDER BY ig_publicado_en DESC LIMIT 5")
+  .all() as { id: number; titulo: string; ig_permalink: string; ig_publicado_en: number }[];
+const ejemplo = textoPara(
+  { titulo: 'Cómo elegir un buen disco para tu laptop', resumen: 'Te explico la diferencia entre HDD, SSD y NVMe.', slug: 'ejemplo', ig_texto: '' },
+  c.plantilla,
+);
+---
+
+<AdminLayout titulo="Instagram">
+  {ok && MENSAJES[ok] && <p class="mb-4 rounded-xl bg-acento/10 p-3 text-sm font-medium text-navy-900">{MENSAJES[ok]}</p>}
+  {error && <p class="mb-4 rounded-xl bg-red-50 p-3 text-sm font-medium text-red-700" role="alert">{error}</p>}
+  {c.aviso && <p class="mb-4 rounded-xl bg-red-50 p-3 text-sm font-medium text-red-700" role="alert">{c.aviso}</p>}
+
+  <div class="grid gap-5 xl:grid-cols-[1fr_24rem]">
+    <div class="space-y-5">
+      <section class="rounded-2xl border border-slate-200 bg-white p-5">
+        <h2 class="flex items-center gap-2 font-display text-lg font-semibold text-navy-900">
+          <Icon name="instagram" size={20} class="text-naranja" /> Cuenta
+        </h2>
+        {
+          c.conectado ? (
+            <>
+              <p class="mt-3 text-sm text-gris">
+                Conectada como{' '}
+                <a href={`https://www.instagram.com/${c.usuario}/`} target="_blank" class="font-semibold text-navy-900 underline">
+                  @{c.usuario}
+                </a>
+                .
+                {c.expira && (
+                  <>
+                    {' '}
+                    El acceso vence el {fecha(c.expira)} ({diasRestantes} días), pero se renueva solo cada semana mientras la web esté
+                    encendida.
+                  </>
+                )}
+              </p>
+              <form method="post" class="mt-4 flex flex-wrap gap-2">
+                <button name="accion" value="renovar" class="btn-outline-dark px-4 py-2 text-sm">
+                  Renovar ahora
+                </button>
+                <button
+                  name="accion"
+                  value="desconectar"
+                  class="rounded-full border border-red-200 px-4 py-2 text-sm text-red-700"
+                  onclick="return confirm('¿Desconectar Instagram? Las publicaciones dejarán de compartirse.')"
+                >
+                  Desconectar
+                </button>
+              </form>
+            </>
+          ) : (
+            <p class="mt-3 text-sm text-gris">Aún no hay ninguna cuenta conectada. Sigue los pasos de la derecha y pega aquí el token.</p>
+          )
+        }
+        <form method="post" class="mt-5 border-t border-slate-100 pt-5">
+          <input type="hidden" name="accion" value="conectar" />
+          <label class="block">
+            <span class="text-sm font-semibold text-navy-900">{c.conectado ? 'Cambiar token de acceso' : 'Token de acceso'}</span>
+            <input
+              name="token"
+              type="password"
+              required
+              autocomplete="off"
+              placeholder="IGAA…"
+              class="mt-1.5 w-full rounded-xl border border-slate-300 px-4 py-2.5 font-mono text-sm outline-none focus:border-navy-700"
+            />
+          </label>
+          <p class="mt-1.5 text-xs text-gris">Se guarda cifrado en el servidor; no se vuelve a mostrar.</p>
+          <button class="btn-primary mt-3 py-2.5">Conectar</button>
+        </form>
+      </section>
+
+      <form method="post" class="rounded-2xl border border-slate-200 bg-white p-5">
+        <input type="hidden" name="accion" value="preferencias" />
+        <h2 class="font-display text-lg font-semibold text-navy-900">Cómo se publica</h2>
+        <label class="mt-4 flex items-start gap-3">
+          <input type="checkbox" name="auto" value="1" checked={c.auto} class="mt-1 size-4 accent-naranja" />
+          <span class="text-sm">
+            <strong class="text-navy-900">Marcar "Compartir en Instagram" por defecto</strong>
+            <span class="block text-gris">En cada publicación nueva la casilla viene marcada; puedes desmarcarla antes de publicar.</span>
+          </span>
+        </label>
+        <label class="mt-5 block">
+          <span class="text-sm font-semibold text-navy-900">Texto del post (plantilla)</span>
+          <textarea
+            name="plantilla"
+            rows="9"
+            maxlength="2200"
+            class="mt-1.5 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-navy-700">{c.plantilla}</textarea
+          >
+        </label>
+        <p class="mt-1.5 text-xs text-gris">
+          Se reemplazan <code>{'{titulo}'}</code>, <code>{'{resumen}'}</code> y <code>{'{url}'}</code>. En Instagram los enlaces del texto no
+          se pueden pulsar: por eso conviene poner <strong>{SITE.url.replace(/^https?:\/\//, '')}/blog</strong> en el enlace de tu perfil.
+          Máximo 30 hashtags.
+        </p>
+        <div class="mt-4 flex flex-wrap items-center gap-2">
+          <button class="btn-primary py-2.5">Guardar</button>
+          {
+            c.plantilla !== PLANTILLA_POR_DEFECTO && (
+              <button
+                type="button"
+                class="text-sm text-gris underline"
+                onclick={`this.form.plantilla.value = ${JSON.stringify(PLANTILLA_POR_DEFECTO)}`}
+              >
+                Restaurar plantilla original
+              </button>
+            )
+          }
+        </div>
+        <details class="mt-4 rounded-xl bg-slate-50 p-4 text-sm">
+          <summary class="cursor-pointer font-medium text-navy-900">Así se vería</summary>
+          <p class="mt-3 whitespace-pre-line text-gris">{ejemplo}</p>
+        </details>
+      </form>
+
+      {
+        compartidas.length > 0 && (
+          <section class="rounded-2xl border border-slate-200 bg-white p-5">
+            <h2 class="font-display text-lg font-semibold text-navy-900">Últimas compartidas</h2>
+            <ul class="mt-3 divide-y divide-slate-100 text-sm">
+              {compartidas.map((p) => (
+                <li class="flex items-center justify-between gap-3 py-2.5">
+                  <a href={`/admin/publicaciones/${p.id}`} class="font-medium text-navy-900 hover:text-naranja">
+                    {p.titulo}
+                  </a>
+                  <a href={p.ig_permalink} target="_blank" class="shrink-0 text-gris underline">
+                    {fecha(p.ig_publicado_en)} →
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )
+      }
+    </div>
+
+    <aside class="rounded-2xl border border-slate-200 bg-white p-5 text-sm leading-relaxed text-gris">
+      <h2 class="font-display text-lg font-semibold text-navy-900">Cómo obtener el token</h2>
+      <p class="mt-2">Se hace una sola vez y es gratis. Usa la API oficial de Meta, así que tu cuenta no corre riesgo.</p>
+      <ol class="mt-4 list-decimal space-y-3 pl-5">
+        <li>
+          En la app de Instagram: <strong>Configuración → Tipo de cuenta y herramientas → Cambiar a cuenta profesional</strong> (Empresa o
+          Creador). No hace falta tener página de Facebook.
+        </li>
+        <li>
+          Entra a <a href="https://developers.facebook.com/apps" target="_blank" class="text-navy-700 underline">developers.facebook.com</a>
+          con tu Facebook, pulsa <strong>Crear app</strong> y elige el caso de uso <strong>"Administrar mensajes y contenido en Instagram"</strong>.
+        </li>
+        <li>
+          En la app, ve a <strong>Instagram → Configuración de la API con inicio de sesión de Instagram</strong>.
+        </li>
+        <li>
+          En <strong>"Generar tokens de acceso"</strong> pulsa <strong>Agregar cuenta</strong>, entra con @{SITE.instagram} y acepta los
+          permisos. Si te pide aceptar una invitación de evaluador, hazlo en Instagram: <strong>Configuración → Apps y sitios web</strong>.
+        </li>
+        <li>Pulsa <strong>Generar token</strong> junto a tu cuenta, cópialo y pégalo aquí.</li>
+      </ol>
+      <p class="mt-4 rounded-xl bg-slate-50 p-3 text-xs">
+        La app puede quedarse en "modo desarrollo": solo publica en tu propia cuenta, así que no necesitas la revisión de Meta.
+      </p>
+      <h3 class="mt-6 font-semibold text-navy-900">Qué se publica</h3>
+      <ul class="mt-2 list-disc space-y-1 pl-5">
+        <li>La <strong>imagen de portada</strong> de la entrada (obligatoria), ajustada al formato de Instagram.</li>
+        <li>El texto de la plantilla, o el que escribas en esa publicación.</li>
+        <li>Solo una vez por entrada: editarla después no cambia el post de Instagram.</li>
+      </ul>
+    </aside>
+  </div>
+</AdminLayout>

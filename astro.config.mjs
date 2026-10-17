@@ -5,7 +5,7 @@ import sitemap from '@astrojs/sitemap';
 import tailwindcss from '@tailwindcss/vite';
 
 // Dirección pública de la web. Se define al construir (variable SITE_URL en .env o en Docker).
-const SITE_URL = (process.env.SITE_URL || 'https://venustech.com.ve').replace(/\/$/, '');
+const SITE_URL = (process.env.SITE_URL || 'https://www.venustechfp.com').replace(/\/$/, '');
 const { hostname, protocol } = new URL(SITE_URL);
 const esquema = protocol.replace(':', '');
 
@@ -24,9 +24,10 @@ export default defineConfig({
     // Dominios desde los que se aceptan formularios y logins (detrás de Nginx)
     allowedDomains: [
       { hostname, protocol: esquema },
-      ...(hostname.startsWith('www.') || /^\d|sslip\.io$|nip\.io$/.test(hostname)
+      // También la variante con o sin "www." (Nginx redirige una a la otra)
+      ...(/^\d|sslip\.io$|nip\.io$|localhost/.test(hostname)
         ? []
-        : [{ hostname: `www.${hostname}`, protocol: esquema }]),
+        : [{ hostname: hostname.startsWith('www.') ? hostname.slice(4) : `www.${hostname}`, protocol: esquema }]),
     ],
   },
   vite: { plugins: [tailwindcss()] },

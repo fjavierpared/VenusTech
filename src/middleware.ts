@@ -9,7 +9,12 @@ export const onRequest = defineMiddleware(async (ctx, next) => {
   const protegida = PROTEGIDAS.some((r) => r.test(pathname)) && !PUBLICAS_ADMIN.includes(pathname);
 
   // Las páginas estáticas (prerender) no tienen request real: no se toca la BD en el build
-  if (!protegida || ctx.isPrerendered) return next();
+  if (ctx.isPrerendered) return next();
+
+  // Mantiene vivo el token de Instagram (se renueva solo cada semana)
+  void import('./lib/instagram').then((m) => m.programarRenovacion());
+
+  if (!protegida) return next();
 
   const { adminDeSesion, COOKIE_SESION } = await import('./lib/auth');
   const admin = adminDeSesion(ctx.cookies.get(COOKIE_SESION)?.value);

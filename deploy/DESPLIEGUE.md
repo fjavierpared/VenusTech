@@ -116,11 +116,37 @@ crontab -e
 
 (Si `sqlite3` no está instalado: `sudo apt install sqlite3`.) Descarga de vez en cuando esos `.tgz` a tu computadora.
 
-## Cambiar al dominio definitivo
+## Cambiar al dominio definitivo (venustechfp.com con Cloudflare)
 
-1. Apunta el dominio a la IP del VPS (registro `A`).
-2. Cambia `SITE_URL` en `.env` y `server_name` en `/etc/nginx/sites-available/venustech`.
-3. `docker compose up -d --build`, `sudo certbot --nginx -d tudominio.com`.
+El dominio usa Cloudflare como DNS. En Cloudflare → **DNS**, crea dos registros `A` hacia la IP del VPS
+(`venustechfp.com` y `www`). Mientras sacas el certificado déjalos en **"Solo DNS"** (nube gris).
+
+```bash
+cd ~/VenusTech
+nano .env                                   # SITE_URL=https://www.venustechfp.com
+docker compose up -d --build
+
+D=~/docker/nginx; H=www.venustechfp.com; H2=venustechfp.com
+# 1) HTTP temporal para validar los dos nombres
+sed "s/server_name TU_DOMINIO;/server_name $H $H2;/; s/TU_DOMINIO/$H/g" deploy/nginx-docker-http.conf > $D/conf.d/venustech.conf
+docker exec nginx nginx -t && docker exec nginx nginx -s reload
+# 2) Un certificado para ambos
+docker run --rm -v $D/certbot/conf:/etc/letsencrypt -v $D/certbot/www:/var/www/certbot certbot/certbot \
+  certonly --webroot -w /var/www/certbot -d $H -d $H2 -m venustech47@gmail.com --agree-tos --no-eff-email
+# 3) HTTPS definitivo (venustechfp.com redirige a www)
+sed "s/server_name TU_DOMINIO;/server_name $H $H2;/; s/TU_DOMINIO/$H/g" deploy/nginx-docker.conf > $D/conf.d/venustech.conf
+# 4) IP real de los visitantes detrás de Cloudflare (analítica y bloqueo de intentos de login)
+cp deploy/nginx-cloudflare.conf $D/conf.d/
+docker exec nginx nginx -t && docker exec nginx nginx -s reload
+```
+
+Después, en Cloudflare:
+
+- **DNS**: puedes volver a activar la nube naranja (proxy). La renovación del certificado sigue funcionando.
+- **SSL/TLS → Modo**: **Completo (estricto)**. Con "Flexible" la web entraría en un bucle de redirecciones.
+- Si activas "Bot Fight Mode", revisa que Instagram pueda descargar las imágenes (si falla al compartir, desactívalo).
+
+Por último, en Google Search Console agrega la propiedad `https://www.venustechfp.com` y envía `/sitemap-index.xml`.
 
 ## Nginx en Docker
 

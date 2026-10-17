@@ -22,7 +22,7 @@ export const MAX_VIDEO = 200 * 1024 * 1024; // 200 MB
 const ANCHO_MAX = 1920;
 
 // Nombre de archivo seguro: solo lo que genera el servidor
-export const ARCHIVO_VALIDO = /^[a-z0-9]{20}\.(webp|mp4|webm)$/;
+export const ARCHIVO_VALIDO = /^[a-z0-9]{20}\.(webp|jpg|mp4|webm)$/;
 
 export const urlMedio = (archivo: string) => `/media/${archivo}`;
 

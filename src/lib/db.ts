@@ -103,6 +103,14 @@ const MIGRACIONES = [
     usado INTEGER NOT NULL DEFAULT 0
   );
   `,
+  `
+  ALTER TABLE publicaciones ADD COLUMN ig_compartir INTEGER NOT NULL DEFAULT 0;
+  ALTER TABLE publicaciones ADD COLUMN ig_texto TEXT NOT NULL DEFAULT '';
+  ALTER TABLE publicaciones ADD COLUMN ig_estado TEXT NOT NULL DEFAULT '';
+  ALTER TABLE publicaciones ADD COLUMN ig_error TEXT;
+  ALTER TABLE publicaciones ADD COLUMN ig_permalink TEXT;
+  ALTER TABLE publicaciones ADD COLUMN ig_publicado_en INTEGER;
+  `,
 ];
 
 function abrir() {

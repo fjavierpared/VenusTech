@@ -9,7 +9,7 @@ import { ARCHIVO_VALIDO } from '../../lib/medios';
 
 export const prerender = false;
 
-const MIME: Record<string, string> = { webp: 'image/webp', mp4: 'video/mp4', webm: 'video/webm' };
+const MIME: Record<string, string> = { webp: 'image/webp', jpg: 'image/jpeg', mp4: 'video/mp4', webm: 'video/webm' };
 
 export const GET: APIRoute = async ({ params, request }) => {
   const archivo = params.archivo ?? '';

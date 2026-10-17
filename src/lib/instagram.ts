@@ -188,18 +188,30 @@ async function prepararImagen(portada: string) {
   return archivo;
 }
 
-async function esperarContenedor(id: string) {
-  for (let i = 0; i < 20; i++) {
+export const VIDEO_VALIDO = /^\/media\/[a-z0-9]{20}\.mp4$/;
+
+// Las fotos se procesan en segundos; los videos (Reels) pueden tardar varios minutos
+async function esperarContenedor(id: string, esVideo: boolean) {
+  const limite = Date.now() + (esVideo ? 15 : 1) * 60_000;
+  while (Date.now() < limite) {
     const { status_code } = await api<{ status_code: string }>(`/${id}`, { params: { fields: 'status_code' } });
     if (status_code === 'FINISHED') return;
-    if (status_code === 'ERROR' || status_code === 'EXPIRED') throw new ErrorInstagram('Instagram no pudo procesar la imagen.');
-    await new Promise((r) => setTimeout(r, 2000));
+    if (status_code === 'ERROR' || status_code === 'EXPIRED')
+      throw new ErrorInstagram(
+        esVideo
+          ? 'Instagram no pudo procesar el video. Debe ser MP4 (H.264 con audio AAC), de 3 s a 15 min y menos de 300 MB.'
+          : 'Instagram no pudo procesar la imagen.',
+      );
+    await new Promise((r) => setTimeout(r, esVideo ? 5000 : 2000));
   }
-  throw new ErrorInstagram('Instagram tardó demasiado en procesar la imagen. Inténtalo de nuevo.');
+  throw new ErrorInstagram(`Instagram tardó demasiado en procesar ${esVideo ? 'el video' : 'la imagen'}. Inténtalo de nuevo.`);
 }
 
-/** Publica la entrada del blog como post de Instagram (portada + texto). Nunca lanza errores. */
-export async function compartir(id: number): Promise<{ ok: true; permalink: string } | { ok: false; error: string }> {
+/**
+ * Empieza a compartir la entrada en Instagram: una foto con la portada o, si eligió uno, un Reel con el video.
+ * Responde al momento y el trabajo sigue en segundo plano (ig_estado = 'publicando' → 'ok' | 'error').
+ */
+export function compartir(id: number): { ok: true } | { ok: false; error: string } {
   const fallo = (error: string) => {
     db.prepare("UPDATE publicaciones SET ig_estado = 'error', ig_error = ? WHERE id = ?").run(error, id);
     return { ok: false as const, error };
@@ -208,31 +220,44 @@ export async function compartir(id: number): Promise<{ ok: true; permalink: stri
   const p = porId(id);
   if (!p) return { ok: false, error: 'La publicación no existe.' };
   if (p.estado !== 'publicado') return { ok: false, error: 'Primero publica la entrada en la web.' };
-  if (p.ig_estado === 'ok') return { ok: true, permalink: p.ig_permalink ?? '' };
+  if (p.ig_estado === 'ok') return { ok: true };
   if (!config().conectado) return fallo('Instagram no está conectado.');
-  if (!p.portada) return fallo('Instagram necesita una imagen: elige una portada para la publicación.');
+  const video = p.ig_video && VIDEO_VALIDO.test(p.ig_video) ? p.ig_video : null;
+  if (!video && !p.portada) return fallo('Instagram necesita una imagen o un video: elige una portada o un video para Instagram.');
   if (!/^https:\/\//.test(SITE.url) || /localhost|127\.0\.0\.1/.test(SITE.url))
-    return fallo('Instagram descarga la imagen desde tu web pública: esto solo funciona en el servidor con tu dominio (SITE_URL).');
+    return fallo('Instagram descarga el archivo desde tu web pública: esto solo funciona en el servidor con tu dominio (SITE_URL).');
 
-  // Evita publicar dos veces si se pulsa el botón repetidamente
+  // Evita publicar dos veces si se pulsa el botón repetidamente (un intento colgado se libera a los 20 min)
   const tomada = db
     .prepare(
       `UPDATE publicaciones SET ig_estado = 'publicando', ig_error = NULL, ig_publicado_en = ?
        WHERE id = ? AND ig_estado != 'ok' AND NOT (ig_estado = 'publicando' AND ig_publicado_en > ?)`,
     )
-    .run(Date.now(), id, Date.now() - 5 * 60_000);
+    .run(Date.now(), id, Date.now() - 20 * 60_000);
   if (!tomada.changes) return { ok: false, error: 'Ya se está compartiendo en Instagram.' };
 
+  void publicar(p, video).catch((e) => {
+    if (e instanceof ErrorInstagram && e.codigo === 190) escribir('aviso', e.message);
+    console.error('Instagram: no se pudo publicar:', e);
+    fallo(e instanceof Error ? e.message : 'Error desconocido al publicar en Instagram.');
+  });
+  return { ok: true };
+}
+
+async function publicar(p: Publicacion, video: string | null) {
   let archivo: string | undefined;
   try {
     await renovarToken();
-    archivo = await prepararImagen(p.portada);
     const usuario = leer('user_id') ?? 'me';
-    const contenedor = await api<{ id: string }>(`/${usuario}/media`, {
-      metodo: 'POST',
-      params: { image_url: `${SITE.url}/media/${archivo}`, caption: textoPara(p) },
-    });
-    await esperarContenedor(contenedor.id);
+    let params: Record<string, string>;
+    if (video) {
+      params = { media_type: 'REELS', video_url: `${SITE.url}${video}`, share_to_feed: 'true' };
+    } else {
+      archivo = await prepararImagen(p.portada!);
+      params = { image_url: `${SITE.url}/media/${archivo}` };
+    }
+    const contenedor = await api<{ id: string }>(`/${usuario}/media`, { metodo: 'POST', params: { ...params, caption: textoPara(p) } });
+    await esperarContenedor(contenedor.id, Boolean(video));
     const post = await api<{ id: string }>(`/${usuario}/media_publish`, { metodo: 'POST', params: { creation_id: contenedor.id } });
     const { permalink = '' } = await api<{ permalink?: string }>(`/${post.id}`, { params: { fields: 'permalink' } }).catch(() => ({
       permalink: '',
@@ -240,14 +265,15 @@ export async function compartir(id: number): Promise<{ ok: true; permalink: stri
     db.prepare("UPDATE publicaciones SET ig_estado = 'ok', ig_error = NULL, ig_permalink = ?, ig_publicado_en = ? WHERE id = ?").run(
       permalink || `https://www.instagram.com/${leer('usuario') ?? ''}/`,
       Date.now(),
-      id,
+      p.id,
     );
-    return { ok: true, permalink };
-  } catch (e) {
-    if (e instanceof ErrorInstagram && e.codigo === 190) escribir('aviso', e.message);
-    console.error('Instagram: no se pudo publicar:', e);
-    return fallo(e instanceof Error ? e.message : 'Error desconocido al publicar en Instagram.');
   } finally {
     if (archivo) await unlink(path.join(UPLOADS_DIR, archivo)).catch(() => {});
   }
+}
+
+/** Estado para que el editor muestre el progreso */
+export function estado(id: number) {
+  const p = porId(id);
+  return p ? { estado: p.ig_estado, error: p.ig_error, permalink: p.ig_permalink } : null;
 }

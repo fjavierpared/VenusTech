@@ -111,6 +111,9 @@ const MIGRACIONES = [
   ALTER TABLE publicaciones ADD COLUMN ig_permalink TEXT;
   ALTER TABLE publicaciones ADD COLUMN ig_publicado_en INTEGER;
   `,
+  `
+  ALTER TABLE publicaciones ADD COLUMN ig_video TEXT;
+  `,
 ];
 
 function abrir() {

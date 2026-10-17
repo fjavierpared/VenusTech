@@ -18,6 +18,7 @@ export interface Publicacion {
   ig_error: string | null;
   ig_permalink: string | null;
   ig_publicado_en: number | null;
+  ig_video: string | null;
 }
 
 export function slugify(texto: string) {
@@ -69,6 +70,7 @@ export function guardar(datos: {
   estado: 'borrador' | 'publicado';
   ig_compartir: boolean;
   ig_texto: string;
+  ig_video: string | null;
 }): { ok: true; id: number } | { ok: false; error: string } {
   const titulo = datos.titulo.trim().slice(0, 160);
   const slug = slugify(datos.slug || titulo);
@@ -81,19 +83,21 @@ export function guardar(datos: {
   const actual = datos.id ? porId(datos.id) : undefined;
   // La fecha de publicación se fija la primera vez que se publica
   const publicadoEn = datos.estado === 'publicado' ? (actual?.publicado_en ?? ahora) : (actual?.publicado_en ?? null);
-  const ig = [datos.ig_compartir ? 1 : 0, datos.ig_texto.trim().slice(0, 2200)] as const;
+  // Solo videos MP4 de la biblioteca (lo que acepta Instagram para Reels)
+  const igVideo = datos.ig_video && /^\/media\/[a-z0-9]{20}\.mp4$/.test(datos.ig_video) ? datos.ig_video : null;
+  const ig = [datos.ig_compartir ? 1 : 0, datos.ig_texto.trim().slice(0, 2200), igVideo] as const;
 
   if (actual) {
     db.prepare(
       `UPDATE publicaciones SET titulo = ?, slug = ?, resumen = ?, contenido = ?, portada = ?, estado = ?,
-       publicado_en = ?, actualizado_en = ?, ig_compartir = ?, ig_texto = ? WHERE id = ?`,
+       publicado_en = ?, actualizado_en = ?, ig_compartir = ?, ig_texto = ?, ig_video = ? WHERE id = ?`,
     ).run(titulo, slug, datos.resumen.trim().slice(0, 300), datos.contenido, datos.portada, datos.estado, publicadoEn, ahora, ...ig, actual.id);
     return { ok: true, id: actual.id };
   }
   const r = db
     .prepare(
-      `INSERT INTO publicaciones (titulo, slug, resumen, contenido, portada, estado, publicado_en, creado_en, actualizado_en, ig_compartir, ig_texto)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO publicaciones (titulo, slug, resumen, contenido, portada, estado, publicado_en, creado_en, actualizado_en, ig_compartir, ig_texto, ig_video)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .run(titulo, slug, datos.resumen.trim().slice(0, 300), datos.contenido, datos.portada, datos.estado, publicadoEn, ahora, ahora, ...ig);
   return { ok: true, id: Number(r.lastInsertRowid) };

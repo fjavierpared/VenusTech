@@ -28,15 +28,17 @@ if (Astro.request.method === 'POST') {
     contenido: String(form.get('contenido') ?? ''),
     portada: String(form.get('portada') ?? '') || null,
     estado: form.get('accion') === 'publicar' ? ('publicado' as const) : ('borrador' as const),
-    ig_compartir: form.get('ig_compartir') === '1',
-    ig_texto: String(form.get('ig_texto') ?? ''),
+    // Si la sección de Instagram no se mostró (ya compartida o compartiendo), se conservan sus valores
+    ig_compartir: form.has('ig_texto') ? form.get('ig_compartir') === '1' : Boolean(actual?.ig_compartir),
+    ig_texto: form.has('ig_texto') ? String(form.get('ig_texto')) : (actual?.ig_texto ?? ''),
+    ig_video: form.has('ig_texto') ? String(form.get('ig_video') ?? '') || null : (actual?.ig_video ?? null),
   };
   const r = guardar(datos);
   if (r.ok) {
     // Al publicar con la casilla marcada se comparte en Instagram (una sola vez por entrada)
     let ig = '';
     if (datos.estado === 'publicado' && datos.ig_compartir && porId(r.id)?.ig_estado !== 'ok') {
-      ig = (await compartir(r.id)).ok ? '&ig=ok' : '&ig=error';
+      ig = compartir(r.id).ok ? '&ig=publicando' : '&ig=error';
     }
     return Astro.redirect(`/admin/publicaciones/${r.id}?guardado=${datos.estado}${ig}`);
   }
@@ -67,18 +69,6 @@ const fechaCorta = (ts: number) => new Intl.DateTimeFormat('es-VE', { dateStyle:
           </>
         ) : (
           'Borrador guardado. No es visible en la web hasta que la publiques.'
-        )}
-      </p>
-    )
-  }
-  {
-    resultadoIg === 'ok' && (
-      <p class="mb-4 rounded-xl bg-acento/10 p-3 text-sm font-medium text-navy-900">
-        También se compartió en Instagram.{' '}
-        {valores.ig_permalink && (
-          <a href={valores.ig_permalink} target="_blank" class="underline">
-            Verla en Instagram →
-          </a>
         )}
       </p>
     )
@@ -202,18 +192,38 @@ const fechaCorta = (ts: number) => new Intl.DateTimeFormat('es-VE', { dateStyle:
                 Ver en Instagram →
               </a>
             </p>
+          ) : valores.ig_estado === 'publicando' ? (
+            <p id="ig-progreso" data-id={actual?.id} class="mt-2 flex items-center gap-2 rounded-lg bg-slate-50 p-2.5 text-sm text-navy-900" role="status">
+              <span class="size-3 shrink-0 animate-spin rounded-full border-2 border-naranja border-t-transparent" />
+              <span>
+                Compartiendo en Instagram…
+                {valores.ig_video && <span class="block text-xs text-gris">Los videos pueden tardar unos minutos. Puedes salir de aquí.</span>}
+              </span>
+            </p>
           ) : (
             <>
               <label class="mt-3 flex items-start gap-2.5 text-sm">
                 <input type="checkbox" name="ig_compartir" value="1" checked={igCompartir} class="mt-0.5 size-4 accent-naranja" />
                 <span>
                   {valores.estado === 'publicado' ? 'Compartir en Instagram al guardar' : 'Compartir en Instagram al publicar'}
-                  <span class="block text-xs text-gris">@{ig.usuario} · usa la imagen de portada</span>
+                  <span class="block text-xs text-gris">@{ig.usuario} · como foto con la portada, o como Reel si eliges un video</span>
                 </span>
               </label>
               {valores.ig_estado === 'error' && valores.ig_error && (
                 <p class="mt-2 rounded-lg bg-red-50 p-2 text-xs text-red-700">Último intento: {valores.ig_error}</p>
               )}
+              <div class="mt-3">
+                <span class="text-xs font-medium text-gris">Video para Instagram (opcional, se publica como Reel)</span>
+                <input type="hidden" name="ig_video" id="ig-video" value={valores.ig_video ?? ''} />
+                <div id="ig-video-vista" class="mt-1 overflow-hidden rounded-xl bg-slate-100">
+                  {valores.ig_video && <video src={valores.ig_video} muted preload="metadata" class="max-h-56 w-full bg-navy-950" />}
+                </div>
+                <div class="mt-2 flex gap-2">
+                  <button type="button" id="elegir-ig-video" class="flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm">Elegir video</button>
+                  <button type="button" id="quitar-ig-video" class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm">Quitar</button>
+                </div>
+                <p class="mt-1 text-xs text-gris">MP4, vertical 9:16 ideal, de 3 s a 15 min.</p>
+              </div>
               <label class="mt-3 block">
                 <span class="text-xs font-medium text-gris">Texto del post (vacío = plantilla)</span>
                 <textarea
@@ -352,7 +362,7 @@ const fechaCorta = (ts: number) => new Intl.DateTimeFormat('es-VE', { dateStyle:
   });
 
   // Biblioteca: para insertar en el contenido o elegir portada
-  let modo: 'contenido' | 'portada' = 'contenido';
+  let modo: 'contenido' | 'portada' | 'igvideo' = 'contenido';
   $('tb-medio').addEventListener('click', () => {
     modo = 'contenido';
     biblioteca.showModal();
@@ -369,7 +379,12 @@ const fechaCorta = (ts: number) => new Intl.DateTimeFormat('es-VE', { dateStyle:
   document.querySelectorAll<HTMLButtonElement>('.vt-medio').forEach((b) =>
     b.addEventListener('click', () => {
       const { url, tipo, alt } = b.dataset;
-      if (modo === 'portada') {
+      if (modo === 'igvideo') {
+        if (!url!.endsWith('.mp4')) return alert('Instagram solo acepta videos MP4.');
+        igVideo.value = url!;
+        igVideoVista.innerHTML = `<video src="${url}" muted preload="metadata" class="max-h-56 w-full bg-navy-950"></video>`;
+        cambios = true;
+      } else if (modo === 'portada') {
         if (tipo !== 'imagen') return alert('La portada debe ser una imagen.');
         portada.value = url!;
         portadaVista.innerHTML = `<img src="${url}" alt="" class="h-full w-full object-cover">`;
@@ -400,6 +415,32 @@ const fechaCorta = (ts: number) => new Intl.DateTimeFormat('es-VE', { dateStyle:
     const r = await fetch('/api/admin/previa', { method: 'POST', body: contenido.value, headers: { 'Content-Type': 'text/plain' } });
     previa.innerHTML = r.ok ? await r.text() : '<p>No se pudo generar la vista previa.</p>';
   });
+
+  // Video para Instagram (Reel)
+  const igVideo = document.getElementById('ig-video') as HTMLInputElement | null;
+  const igVideoVista = document.getElementById('ig-video-vista') as HTMLElement;
+  document.getElementById('elegir-ig-video')?.addEventListener('click', () => {
+    modo = 'igvideo';
+    biblioteca.showModal();
+  });
+  document.getElementById('quitar-ig-video')?.addEventListener('click', () => {
+    igVideo!.value = '';
+    igVideoVista.innerHTML = '';
+    cambios = true;
+  });
+
+  // Mientras se comparte en Instagram, se consulta el estado cada 5 s
+  const progreso = document.getElementById('ig-progreso');
+  if (progreso) {
+    const revisar = async () => {
+      const r = await fetch(`/api/admin/instagram?id=${progreso.dataset.id}`).catch(() => null);
+      const e = r?.ok ? ((await r.json()) as { estado: string; error: string | null; permalink: string | null }) : null;
+      if (!e || e.estado === 'publicando') return setTimeout(revisar, 5000);
+      if (!cambios) return location.replace(location.pathname);
+      progreso.textContent = e.estado === 'ok' ? '✓ Compartida en Instagram.' : `No se pudo compartir: ${e.error ?? 'error desconocido'}`;
+    };
+    setTimeout(revisar, 3000);
+  }
 
   // El texto de Instagram muestra, mientras esté vacío, cómo quedaría con la plantilla
   const igTexto = document.getElementById('ig-texto') as HTMLTextAreaElement | null;

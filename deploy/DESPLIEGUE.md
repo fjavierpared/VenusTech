@@ -144,6 +144,7 @@ Después, en Cloudflare:
 
 - **DNS**: puedes volver a activar la nube naranja (proxy). La renovación del certificado sigue funcionando.
 - **SSL/TLS → Modo**: **Completo (estricto)**. Con "Flexible" la web entraría en un bucle de redirecciones.
+- El plan gratis de Cloudflare no deja subir archivos de más de **100 MB**: comprime los videos antes de subirlos al panel.
 - Si activas "Bot Fight Mode", revisa que Instagram pueda descargar las imágenes (si falla al compartir, desactívalo).
 
 Por último, en Google Search Console agrega la propiedad `https://www.venustechfp.com` y envía `/sitemap-index.xml`.

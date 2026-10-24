@@ -2,7 +2,7 @@
 
 Sitio web y panel de control de [VenusTech](https://venustechfp.com), hecho por **Francisco Paredes**, Ingeniero de Sistemas en Mérida, Venezuela.
 
-🌐 **En vivo:** https://venustechfp.com
+**En vivo:** https://venustechfp.com
 
 ![Portada de venustechfp.com](docs/captura-portada.png)
 

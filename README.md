@@ -1,5 +1,11 @@
 # VenusTech — Sitio web
 
+Sitio web y panel de control de [VenusTech](https://venustechfp.com), hecho por **Francisco Paredes**, Ingeniero de Sistemas en Mérida, Venezuela.
+
+🌐 **En vivo:** https://venustechfp.com
+
+![Portada de venustechfp.com](docs/captura-portada.png)
+
 **Astro 7 + Tailwind CSS 4 + SQLite** (incluido en Node.js 22, sin instalar nada más).
 Las páginas públicas son HTML estático; el panel, el blog y la API corren en el servidor Node.
 Pensado para desplegarse en un VPS Ubuntu con Nginx + Docker.
@@ -52,3 +58,9 @@ Para agregar un proyecto, copia uno de los `.md` de `src/content/proyectos/` y c
 
 Guía completa paso a paso: [`deploy/DESPLIEGUE.md`](deploy/DESPLIEGUE.md).
 El dominio se define en una sola variable, `SITE_URL` (en `.env`).
+
+## Licencia
+
+El **código** está bajo licencia [MIT](LICENSE): puedes usarlo, modificarlo y distribuirlo, también con fines comerciales, siempre que conserves el aviso de copyright (el crédito a Francisco Paredes).
+
+**La marca no está incluida.** "VenusTech" y "Venus Tech F.P." son marcas registradas. El nombre, los logos, las fotos y los textos y datos del negocio (`diseologovenustech/`, `src/assets/`, `docs/`, imágenes de `public/`, `src/content/` y `src/data/`) tienen todos los derechos reservados y no se pueden usar sin permiso. Si usas este proyecto como base, reemplázalos por los tuyos.

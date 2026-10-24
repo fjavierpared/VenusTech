@@ -3,6 +3,8 @@
   "type": "module",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
+  "author": "Francisco Paredes (https://venustechfp.com)",
   "scripts": {
     "dev": "NODE_OPTIONS=--disable-warning=ExperimentalWarning astro dev",
     "build": "astro build",

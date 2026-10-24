@@ -1,0 +1,40 @@
+MIT License
+
+Copyright (c) 2026 Francisco Paredes (VenusTech)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+The VenusTech name and logos are NOT covered by this license / El nombre y los
+logos de VenusTech NO están cubiertos por esta licencia:
+
+"VenusTech" and "Venus Tech F.P." are registered trademarks of Francisco
+Paredes. The name, the logos, the photographs and the business content (texts,
+contact details and project descriptions) are all rights reserved and may not
+be used without written permission. This covers the folders
+diseologovenustech/, src/assets/, docs/, the images in public/, src/content/
+and the data in src/data/. You may use the code; replace these with your own.
+
+"VenusTech" y "Venus Tech F.P." son marcas registradas de Francisco Paredes.
+El nombre, los logos, las fotografías y el contenido del negocio (textos, datos
+de contacto y descripciones de proyectos) tienen todos los derechos reservados
+y no se pueden usar sin permiso por escrito. Esto incluye las carpetas
+diseologovenustech/, src/assets/, docs/, las imágenes de public/, src/content/
+y los datos de src/data/. Puedes usar el código; reemplaza todo esto por lo tuyo.

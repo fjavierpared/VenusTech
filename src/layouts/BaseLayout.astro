@@ -190,6 +190,7 @@ const jsonLd = [negocio, persona, sitioWeb, ...migas, ...schema];
     <link rel="manifest" href="/site.webmanifest" />
     <meta name="theme-color" content="#07265A" />
     <link rel="sitemap" href="/sitemap-index.xml" />
+    <link rel="alternate" type="application/rss+xml" title={`Blog de ${SITE.name}`} href="/rss.xml" />
 
     <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
   </head>

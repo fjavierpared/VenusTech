@@ -15,6 +15,8 @@ const proyectos = defineCollection({
     resultados: z.array(z.string()),
     metricas: z.array(z.object({ valor: z.string(), etiqueta: z.string() })).default([]),
     stack: z.array(z.string()),
+    // Enlace público opcional del proyecto (botón "Visitar sitio")
+    enlace: z.url().optional(),
     orden: z.number().default(99),
     destacado: z.boolean().default(false),
   }),

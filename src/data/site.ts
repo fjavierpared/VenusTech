@@ -1,3 +1,6 @@
+// Año en que empecé a trabajar en soporte y servidores: los años de experiencia se calculan solos.
+export const ANIO_INICIO_EXPERIENCIA = 2021;
+
 // Datos del negocio. Edita aquí y se actualiza en toda la web.
 export const SITE = {
   name: 'VenusTech',
@@ -33,7 +36,7 @@ export const SITE = {
   countryCode: 'VE',
   // Coordenadas aproximadas del centro de Mérida (para el schema LocalBusiness)
   geo: { lat: 8.5897, lng: -71.1561 },
-  yearsExperience: 5,
+  yearsExperience: new Date().getFullYear() - ANIO_INICIO_EXPERIENCIA,
   whatsapp: '584247126299',
   phone: '+58 424-7126299',
   phoneDisplay: '0424-712 6299',

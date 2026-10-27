@@ -150,32 +150,51 @@
 /* Estilo editorial (revista) para los artículos del blog */
 @layer components {
   .prose-revista {
-    @apply font-serif text-[1.22rem] leading-[1.8] text-tinta/90 sm:text-[1.3rem];
+    @apply font-sans text-[1.125rem] leading-[1.7] text-tinta/90 sm:text-[1.25rem];
   }
   .prose-revista > p:first-of-type::first-letter {
     @apply float-left mt-2 mr-3 font-display text-[4.6rem] leading-[0.8] font-extrabold text-naranja;
   }
   .prose-revista p {
-    @apply mb-6;
+    @apply mb-7;
   }
+  /* Títulos de sección con una barra de acento naranja */
   .prose-revista h2 {
-    @apply mt-14 mb-5 border-t border-navy-900/10 pt-8 font-display text-[1.9rem] leading-tight font-bold text-navy-900;
+    @apply mt-16 mb-5 border-t border-navy-900/10 pt-9 font-display text-[1.75rem] leading-tight font-bold tracking-tight text-navy-900 sm:text-[2rem];
+  }
+  .prose-revista h2::before {
+    content: '';
+    @apply mb-4 block h-1 w-12 rounded-full bg-linear-to-r from-naranja to-ambar;
   }
   .prose-revista h3 {
-    @apply mt-10 mb-3 font-display text-[1.4rem] font-semibold text-navy-900;
+    @apply mt-11 mb-3 font-display text-[1.3rem] leading-snug font-bold text-navy-800 sm:text-[1.45rem];
+  }
+  .prose-revista h2 + p,
+  .prose-revista h3 + p {
+    @apply mt-0;
   }
   .prose-revista h4 {
     @apply mt-8 mb-2 font-display text-sm font-bold tracking-[0.18em] text-naranja-600 uppercase;
   }
   .prose-revista strong {
-    @apply font-semibold text-navy-950;
+    @apply font-bold text-navy-950;
+  }
+  .prose-revista em {
+    @apply text-tinta;
   }
   .prose-revista a {
     @apply text-navy-700 underline decoration-naranja/60 decoration-2 underline-offset-4 hover:text-naranja-600;
   }
   .prose-revista ul,
   .prose-revista ol {
-    @apply mb-6 space-y-2 pl-7;
+    @apply mb-7 space-y-3 pl-7;
+  }
+  .prose-revista li {
+    @apply pl-1.5;
+  }
+  .prose-revista li > ul,
+  .prose-revista li > ol {
+    @apply mt-3 mb-0;
   }
   .prose-revista ul {
     @apply list-disc marker:text-naranja;

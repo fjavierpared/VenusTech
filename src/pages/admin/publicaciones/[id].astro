@@ -3,7 +3,8 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
 import { eliminar, guardar, porId, type Publicacion } from '../../../lib/publicaciones';
 import Icon from '../../../components/Icon.astro';
 import { listar, urlMedio } from '../../../lib/medios';
-import { compartir, config as configInstagram } from '../../../lib/instagram';
+import { compartir, config as configInstagram, textoPara } from '../../../lib/instagram';
+import simbolo from '../../../assets/logo/simbolo.png';
 
 export const prerender = false;
 
@@ -51,6 +52,8 @@ const resultadoIg = Astro.url.searchParams.get('ig');
 const medios = listar();
 const ig = configInstagram();
 const igCompartir = actual ? Boolean(valores.ig_compartir) : ig.auto;
+// Compartir a mano (sin token): solo para entradas ya publicadas
+const manual = actual && actual.estado === 'publicado' ? { texto: textoPara(actual, ig.plantilla) } : null;
 const fechaCorta = (ts: number) => new Intl.DateTimeFormat('es-VE', { dateStyle: 'medium' }).format(ts);
 ---
 
@@ -182,8 +185,8 @@ const fechaCorta = (ts: number) => new Intl.DateTimeFormat('es-VE', { dateStyle:
         {
           !ig.conectado ? (
             <p class="mt-2 text-sm text-gris">
-              <a href="/admin/instagram" class="text-navy-700 underline">Conecta tu cuenta</a> para que tus publicaciones salgan también en
-              Instagram.
+              {manual ? 'Compártela con el botón de abajo, o ' : 'Al publicar podrás compartirla con un botón, o '}
+              <a href="/admin/instagram" class="text-navy-700 underline">conecta tu cuenta</a> para que salga sola.
             </p>
           ) : valores.ig_estado === 'ok' ? (
             <p class="mt-2 text-sm text-gris">
@@ -239,6 +242,35 @@ const fechaCorta = (ts: number) => new Intl.DateTimeFormat('es-VE', { dateStyle:
           )
         }
       </section>
+
+      {
+        manual && (
+          <section class="rounded-2xl border border-slate-200 bg-white p-5" id="ig-manual" data-portada={valores.portada ?? ''} data-titulo={valores.titulo} data-simbolo={simbolo.src}>
+            <span class="flex items-center gap-2 text-sm font-semibold text-navy-900">
+              <Icon name="instagram" size={16} class="text-naranja" /> Compartir en Instagram
+            </span>
+            <p class="mt-1 text-xs text-gris">Sin conectar la cuenta: preparo la imagen y el texto, y tú publicas desde la app.</p>
+            <canvas id="ig-lienzo" width="1080" height="1350" class="mt-3 w-full rounded-xl bg-navy-950"></canvas>
+            <label class="mt-2 flex items-center gap-2 text-sm">
+              <input type="checkbox" id="ig-con-titulo" checked class="size-4 accent-naranja" /> Título sobre la imagen
+            </label>
+            <label class="mt-3 block">
+              <span class="text-xs font-medium text-gris">Texto del post</span>
+              <textarea id="ig-manual-texto" rows="6" maxlength="2200" class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-navy-700">{manual.texto}</textarea>
+            </label>
+            <div class="mt-3 grid gap-2">
+              <button type="button" id="ig-compartir" class="btn-primary py-2.5">Compartir</button>
+              <div class="grid grid-cols-2 gap-2">
+                <button type="button" id="ig-descargar" class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm">Descargar imagen</button>
+                <button type="button" id="ig-copiar" class="rounded-lg border border-slate-300 px-3 py-1.5 text-sm">Copiar texto</button>
+              </div>
+            </div>
+            <p id="ig-manual-aviso" class="mt-2 text-xs text-gris" role="status">
+              En el celular, «Compartir» copia el texto y abre el menú del teléfono: elige Instagram y pega el texto.
+            </p>
+          </section>
+        )
+      }
 
       {
         actual && (
@@ -455,6 +487,126 @@ const fechaCorta = (ts: number) => new Intl.DateTimeFormat('es-VE', { dateStyle:
     };
     [titulo, slug, resumen].forEach((el) => el.addEventListener('input', actualizar));
     actualizar();
+  }
+
+  // Compartir en Instagram a mano: la imagen (1080×1350, 4:5) se dibuja aquí mismo con las fuentes de la web
+  const manual = document.getElementById('ig-manual');
+  if (manual) {
+    const lienzo = $<HTMLCanvasElement>('ig-lienzo');
+    const conTitulo = $<HTMLInputElement>('ig-con-titulo');
+    const texto = $<HTMLTextAreaElement>('ig-manual-texto');
+    const aviso = $('ig-manual-aviso');
+    const { portada: urlPortada, titulo: tituloPost = '', simbolo: urlSimbolo } = manual.dataset;
+    const nombre = `${slug.value || 'venustech'}-instagram.jpg`;
+    let archivo: File | null = null;
+
+    const cargar = (src: string) =>
+      new Promise<HTMLImageElement | null>((ok) => {
+        const img = new Image();
+        img.onload = () => ok(img);
+        img.onerror = () => ok(null);
+        img.src = src;
+      });
+
+    function lineas(ctx: CanvasRenderingContext2D, t: string, ancho: number) {
+      const res: string[] = [];
+      let linea = '';
+      for (const palabra of t.split(/\s+/)) {
+        const prueba = linea ? `${linea} ${palabra}` : palabra;
+        if (ctx.measureText(prueba).width > ancho && linea) {
+          res.push(linea);
+          linea = palabra;
+        } else linea = prueba;
+      }
+      if (linea) res.push(linea);
+      return res;
+    }
+
+    async function dibujar() {
+      const [img, logo] = await Promise.all([urlPortada ? cargar(urlPortada) : null, cargar(urlSimbolo!), document.fonts.ready]);
+      const ctx = lienzo.getContext('2d')!;
+      const W = lienzo.width;
+      const H = lienzo.height;
+      ctx.fillStyle = '#041a40';
+      ctx.fillRect(0, 0, W, H);
+      if (img) {
+        const k = Math.max(W / img.width, H / img.height);
+        ctx.drawImage(img, (W - img.width * k) / 2, (H - img.height * k) / 2, img.width * k, img.height * k);
+      }
+      if (conTitulo.checked || !img) {
+        const sombra = ctx.createLinearGradient(0, H * 0.35, 0, H);
+        sombra.addColorStop(0, 'rgba(4,26,64,0)');
+        sombra.addColorStop(0.45, 'rgba(4,26,64,0.9)');
+        sombra.addColorStop(1, 'rgba(4,26,64,0.97)');
+        ctx.fillStyle = sombra;
+        ctx.fillRect(0, 0, W, H);
+
+        // Título: se achica hasta caber en 5 líneas como máximo
+        let tam = 84;
+        let filas: string[] = [];
+        do {
+          ctx.font = `800 ${tam}px "Exo 2 Variable", sans-serif`;
+          filas = lineas(ctx, tituloPost, W - 160);
+          tam -= 6;
+        } while (filas.length > 5 && tam > 40);
+        const alto = tam * 1.12;
+        let y = H - 190 - (filas.length - 1) * alto;
+        const barra = ctx.createLinearGradient(80, 0, 200, 0);
+        barra.addColorStop(0, '#ff6f12');
+        barra.addColorStop(1, '#ffb300');
+        ctx.fillStyle = barra;
+        ctx.fillRect(80, y - tam - 50, 120, 10);
+        ctx.fillStyle = '#ffffff';
+        for (const f of filas) {
+          ctx.fillText(f, 80, y);
+          y += alto;
+        }
+
+        // Firma: símbolo + dominio
+        ctx.font = '600 34px "Inter Variable", sans-serif';
+        ctx.fillStyle = 'rgba(255,255,255,0.8)';
+        if (logo) ctx.drawImage(logo, 80, H - 120, (56 * logo.width) / logo.height, 56);
+        ctx.fillText(location.host, 80 + (logo ? (56 * logo.width) / logo.height + 18 : 0), H - 80);
+      }
+      const blob = await new Promise<Blob | null>((ok) => lienzo.toBlob(ok, 'image/jpeg', 0.9));
+      archivo = blob ? new File([blob], nombre, { type: 'image/jpeg' }) : null;
+    }
+
+    function descargar() {
+      if (!archivo) return;
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(archivo);
+      a.download = nombre;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    }
+    const copiar = () => navigator.clipboard.writeText(texto.value).then(() => true, () => false);
+
+    conTitulo.addEventListener('change', dibujar);
+    dibujar();
+
+    $('ig-descargar').addEventListener('click', descargar);
+    $('ig-copiar').addEventListener('click', async () => {
+      aviso.textContent = (await copiar()) ? '✓ Texto copiado.' : 'No se pudo copiar: selecciónalo y cópialo a mano.';
+    });
+    $('ig-compartir').addEventListener('click', async () => {
+      if (!archivo) return (aviso.textContent = 'La imagen aún se está preparando, intenta de nuevo.');
+      // Se llaman sin esperar entre sí: el menú de compartir exige el toque del usuario
+      const copiado = copiar();
+      if (navigator.canShare?.({ files: [archivo] })) {
+        try {
+          await navigator.share({ files: [archivo] });
+          aviso.textContent = (await copiado) ? '✓ Texto copiado: pégalo en Instagram como descripción.' : 'Imagen compartida. Copia el texto con «Copiar texto».';
+        } catch {
+          aviso.textContent = 'Compartir cancelado.';
+        }
+      } else {
+        descargar();
+        aviso.textContent = (await copiado)
+          ? '✓ Imagen descargada y texto copiado. Súbela en instagram.com o pásala al celular.'
+          : 'Imagen descargada. Copia el texto con «Copiar texto».';
+      }
+    });
   }
 
   // Aviso si sales con cambios sin guardar

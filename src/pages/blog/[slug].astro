@@ -3,9 +3,10 @@ import { Image } from 'astro:assets';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import Icon from '../../components/Icon.astro';
 import CtaFinal from '../../components/CtaFinal.astro';
+import Logo from '../../components/Logo.astro';
 import foto from '../../assets/fotos/francisco.jpg';
 import { fechaLarga, minutosLectura, otrasPublicadas, publicadaPorSlug, renderMarkdown } from '../../lib/publicaciones';
-import { SITE } from '../../data/site';
+import { SITE, waLink } from '../../data/site';
 
 export const prerender = false;
 
@@ -24,6 +25,8 @@ const minutos = minutosLectura(post.contenido);
 const otras = otrasPublicadas(post.slug);
 const iso = (ts: number) => new Date(ts).toISOString();
 const compartirWa = `https://wa.me/?text=${encodeURIComponent(`${post.titulo} ${urlCompleta}`)}`;
+const contactoWa = waLink(`Hola, vengo de la web de VenusTech. Leí el artículo "${post.titulo}" y quiero hacer una consulta.`);
+const contactoCorreo = `mailto:${SITE.email}?subject=${encodeURIComponent(`Consulta desde el blog: ${post.titulo}`)}`;
 Astro.response.headers.set('Cache-Control', 'public, max-age=60');
 
 const articulo = {
@@ -73,7 +76,11 @@ const articulo = {
     {
       post.portada && (
         <div class="container-vt mt-10 max-w-5xl">
-          <img src={post.portada} alt="" class="aspect-[16/9] w-full rounded-xl object-cover" />
+          <img
+            src={post.portada}
+            alt=""
+            class="aspect-[16/9] w-full rounded-2xl object-cover shadow-xl ring-1 shadow-navy-900/15 ring-navy-900/5"
+          />
         </div>
       )
     }
@@ -107,6 +114,25 @@ const articulo = {
           </a>
         </div>
       </aside>
+
+      <!-- Pie del artículo: marca y contacto -->
+      <footer class="relative mt-10 overflow-hidden rounded-2xl bg-navy-950 p-7 text-white shadow-xl shadow-navy-900/20 sm:p-9">
+        <div class="absolute inset-x-0 top-0 h-1 bg-linear-to-r from-naranja via-ambar to-naranja"></div>
+        <Logo size={44} />
+        <p class="mt-5 font-display text-2xl leading-snug font-bold">¿Necesitas ayuda con tu proyecto tecnológico?</p>
+        <p class="mt-2 leading-relaxed text-white/70">
+          En VenusTech desarrollo páginas web y sistemas, doy soporte técnico, administro servidores e instalo cámaras de
+          seguridad. Escríbeme y conversamos sin compromiso.
+        </p>
+        <div class="mt-6 flex flex-col gap-3 sm:flex-row">
+          <a href={contactoWa} target="_blank" rel="noopener" class="btn-whatsapp">
+            <Icon name="whatsapp" size={20} /> Escríbeme por WhatsApp
+          </a>
+          <a href={contactoCorreo} class="btn-outline-light">
+            <Icon name="mail" size={20} /> Enviar un correo
+          </a>
+        </div>
+      </footer>
     </div>
   </article>
 

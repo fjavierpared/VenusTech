@@ -19,6 +19,14 @@ const year = new Date().getFullYear();
       <p class="mt-4 font-display text-xs tracking-widest text-white/50 uppercase">
         {SITE.legalName} · <span class="whitespace-nowrap">RIF {SITE.rif}</span>
       </p>
+      <a
+        href={instagramUrl}
+        target="_blank"
+        rel="noopener"
+        class="btn mt-6 bg-linear-to-r from-[#F58529] via-[#DD2A7B] to-[#8134AF] px-5 py-2.5 text-sm text-white shadow-lg shadow-[#DD2A7B]/20 hover:brightness-110"
+      >
+        <Icon name="instagram" size={18} /> Síguenos en Instagram
+      </a>
     </div>
 
     <div>
@@ -87,7 +95,12 @@ const year = new Date().getFullYear();
   </div>
   <div class="border-t border-white/10">
     <p class="container-vt py-5 text-xs text-white/50">
-      © {year} {SITE.name}. Todos los derechos reservados.
+      © <span data-anio-actual>{year}</span> {SITE.name}. Todos los derechos reservados.
     </p>
   </div>
 </footer>
+
+<script>
+  // Las páginas estáticas guardan el año en que se compilaron; aquí se ajusta al año actual del visitante.
+  document.querySelectorAll('[data-anio-actual]').forEach((el) => (el.textContent = String(new Date().getFullYear())));
+</script>

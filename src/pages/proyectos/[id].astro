@@ -28,6 +28,7 @@ const caso = {
   url: new URL(path, SITE.url).href,
   creator: { '@id': `${SITE.url}/#negocio` },
   keywords: data.stack.join(', '),
+  ...(data.enlace ? { sameAs: data.enlace } : {}),
   inLanguage: 'es-VE',
 };
 ---
@@ -74,6 +75,13 @@ const caso = {
             {data.stack.map((t) => <li class="rounded-full bg-crema px-3 py-1 text-xs font-medium text-navy-800">{t}</li>)}
           </ul>
         </div>
+        {
+          data.enlace && (
+            <a href={data.enlace} target="_blank" rel="noopener" class="btn-primary w-full">
+              Visitar sitio <Icon name="arrow-right" size={18} />
+            </a>
+          )
+        }
         <a href="/proyectos" class="inline-flex items-center gap-2 text-sm font-semibold text-navy-700 hover:text-naranja">
           ← Todos los proyectos
         </a>

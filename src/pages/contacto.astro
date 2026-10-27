@@ -188,7 +188,7 @@ const contactoPage = {
       .join('\n');
     // Se abre WhatsApp primero (en el mismo clic, para que el navegador no lo bloquee)
     window.open(`https://wa.me/${wa}?text=${encodeURIComponent(texto)}`, '_blank', 'noopener');
-    const registro = JSON.stringify({ nombre, empresa, telefono, servicio, mensaje, sitio_web: datos.get('sitio_web') });
+    const registro = JSON.stringify({ nombre, empresa, telefono, servicio, mensaje, sitio_web: datos.get('sitio_web'), v: window.vtVisitante });
     navigator.sendBeacon?.('/api/contacto', new Blob([registro], { type: 'text/plain' }));
     window.vtTrack?.('formulario_enviado', servicio);
     form.reset();

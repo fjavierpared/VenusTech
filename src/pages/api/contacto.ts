@@ -37,13 +37,16 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
 
   const empresa = texto(datos.empresa, 160);
   const telefono = texto(datos.telefono, 40);
-  db.prepare('INSERT INTO mensajes (ts, nombre, empresa, telefono, servicio, mensaje) VALUES (?, ?, ?, ?, ?, ?)').run(
+  // Código anónimo del visitante: permite ver en el panel qué páginas vio antes de escribir
+  const visitante = typeof datos.v === 'string' && /^[a-f0-9]{16}$/.test(datos.v) ? datos.v : null;
+  db.prepare('INSERT INTO mensajes (ts, nombre, empresa, telefono, servicio, mensaje, visitante) VALUES (?, ?, ?, ?, ?, ?, ?)').run(
     ahora,
     nombre,
     empresa || null,
     telefono || null,
     servicio,
     mensaje,
+    visitante,
   );
 
   // Aviso a tu correo (sin hacer esperar al visitante)

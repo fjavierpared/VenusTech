@@ -16,6 +16,7 @@ const { n: nuevos } = db.prepare("SELECT COUNT(*) n FROM mensajes WHERE estado =
 const path = Astro.url.pathname.replace(/\/$/, '') || '/admin';
 const nav: { href: string; label: string; icon: IconName; badge?: number }[] = [
   { href: '/admin', label: 'Resumen', icon: 'layout' },
+  { href: '/admin/visitantes', label: 'Visitantes', icon: 'user' },
   { href: '/admin/mensajes', label: 'Mensajes', icon: 'mail', badge: nuevos },
   { href: '/admin/publicaciones', label: 'Publicaciones', icon: 'file-text' },
   { href: '/admin/medios', label: 'Imágenes y videos', icon: 'layers' },

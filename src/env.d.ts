@@ -6,4 +6,5 @@ declare namespace App {
 
 interface Window {
   vtTrack?: (tipo: string, detalle?: string) => void;
+  vtVisitante?: string;
 }

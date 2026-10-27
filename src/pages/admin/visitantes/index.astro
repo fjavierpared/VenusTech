@@ -1,0 +1,174 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import ListaBarras from '../../../components/admin/ListaBarras.astro';
+import Recorrido from '../../../components/admin/Recorrido.astro';
+import { detalle, duracionLegible, enVivo, recorridosRecientes } from '../../../lib/analytics';
+
+export const prerender = false;
+
+const RANGOS = [7, 30, 90];
+const dias = RANGOS.includes(Number(Astro.url.searchParams.get('d'))) ? Number(Astro.url.searchParams.get('d')) : 30;
+const d = detalle(dias);
+const vivos = enVivo();
+const recorridos = recorridosRecientes(40);
+
+const tarjetas = [
+  { titulo: 'Visitas', valor: d.sesiones.toLocaleString('es-VE'), nota: 'Entradas a la web (30 min sin actividad = otra visita)' },
+  { titulo: 'Páginas por visita', valor: d.paginasPorVisita.toFixed(1), nota: 'Promedio' },
+  { titulo: 'Tiempo por visita', valor: duracionLegible(d.tiempoPorVisita), nota: 'Tiempo activo, con la pestaña visible' },
+  {
+    titulo: 'Visitantes que regresan',
+    valor: `${d.visitantes ? Math.round((d.recurrentes / d.visitantes) * 100) : 0} %`,
+    nota: `${d.recurrentes} de ${d.visitantes} visitantes han venido más de una vez`,
+  },
+];
+---
+
+<AdminLayout titulo="Visitantes">
+  <div slot="acciones" class="flex rounded-full border border-slate-300 bg-white p-0.5 text-sm" role="group" aria-label="Periodo">
+    {
+      RANGOS.map((r) => (
+        <a
+          href={`/admin/visitantes?d=${r}`}
+          aria-current={r === dias ? 'true' : undefined}
+          class:list={['rounded-full px-3 py-1', r === dias ? 'bg-navy-900 text-white' : 'text-gris hover:text-navy-900']}
+        >
+          {r} días
+        </a>
+      ))
+    }
+  </div>
+
+  <section class="rounded-2xl border border-slate-200 bg-white p-5">
+    <h2 class="flex items-center gap-2 font-display font-semibold text-navy-900">
+      <span class="relative flex size-2.5">
+        <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-acento opacity-60"></span>
+        <span class="relative inline-flex size-2.5 rounded-full bg-acento"></span>
+      </span>
+      En vivo: <span id="vivos-total">{vivos.length}</span> <span id="vivos-texto">{vivos.length === 1 ? 'persona' : 'personas'}</span> en la web
+    </h2>
+    <ul id="vivos" class="mt-3 divide-y divide-slate-100 text-sm">
+      {
+        vivos.map((v) => (
+          <li class="flex flex-wrap justify-between gap-2 py-2">
+            <a href={`/admin/visitantes/${v.visitante}`} class="font-medium text-navy-900 hover:text-naranja">{v.ruta}</a>
+            <span class="text-gris">{v.lugar} · {v.dispositivo}{v.so ? ` · ${v.so}` : ''}</span>
+          </li>
+        ))
+      }
+    </ul>
+    <p id="vivos-vacio" class:list={['mt-2 text-sm text-gris', vivos.length && 'hidden']}>Nadie en este momento. Se actualiza solo.</p>
+  </section>
+
+  <div class="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    {
+      tarjetas.map((t) => (
+        <section class="rounded-2xl border border-slate-200 bg-white p-5">
+          <h2 class="text-sm font-medium text-gris">{t.titulo}</h2>
+          <p class="mt-2 font-display text-3xl font-bold text-navy-900 tabular-nums">{t.valor}</p>
+          <p class="mt-1 text-xs text-gris">{t.nota}</p>
+        </section>
+      ))
+    }
+  </div>
+
+  <div class="mt-4 grid gap-4 lg:grid-cols-2">
+    <ListaBarras titulo="Países" filas={d.paises} />
+    <ListaBarras
+      titulo="Ciudades"
+      filas={d.ciudades}
+      vacio="Aún sin ciudades. Activa en Cloudflare: Reglas › Transformaciones administradas › «Agregar encabezados de ubicación del visitante»."
+    />
+    <ListaBarras titulo="Sistemas operativos" filas={d.sistemas} />
+    <ListaBarras titulo="Idioma del navegador" filas={d.idiomas} />
+  </div>
+
+  <section class="mt-4 rounded-2xl border border-slate-200 bg-white p-5">
+    <h2 class="font-display font-semibold text-navy-900">Lectura del blog</h2>
+    <p class="text-sm text-gris">Hasta dónde bajan en cada artículo. «Completo» = llegó al 90 % o más.</p>
+    {
+      d.blog.length === 0 ? (
+        <p class="mt-4 text-sm text-gris">Sin lecturas en este periodo.</p>
+      ) : (
+        <div class="mt-4 overflow-x-auto">
+          <table class="w-full text-left text-sm">
+            <thead class="text-xs text-gris uppercase">
+              <tr>
+                <th class="py-2 pr-3 font-medium">Artículo</th>
+                <th class="px-3 py-2 text-right font-medium">Visitas</th>
+                <th class="px-3 py-2 text-right font-medium">Leído</th>
+                <th class="px-3 py-2 text-right font-medium">Completo</th>
+                <th class="py-2 pl-3 text-right font-medium">Tiempo</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              {d.blog.map((b) => (
+                <tr>
+                  <td class="max-w-xs truncate py-2 pr-3">
+                    <a href={b.ruta} target="_blank" class="text-navy-900 hover:text-naranja">{b.ruta.replace('/blog/', '')}</a>
+                  </td>
+                  <td class="px-3 py-2 text-right tabular-nums">{b.visitas}</td>
+                  <td class="px-3 py-2 text-right tabular-nums">{b.scroll === null ? '—' : `${Math.round(b.scroll)} %`}</td>
+                  <td class="px-3 py-2 text-right tabular-nums">{Math.round(b.completos)} %</td>
+                  <td class="py-2 pl-3 text-right tabular-nums">{duracionLegible(b.tiempo)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )
+    }
+  </section>
+
+  <h2 class="mt-8 font-display text-lg font-semibold text-navy-900">Últimas visitas, página por página</h2>
+  {
+    recorridos.length === 0 ? (
+      <p class="mt-3 text-sm text-gris">Todavía no hay visitas registradas.</p>
+    ) : (
+      <ul class="mt-3 space-y-3">
+        {recorridos.map((r) => (
+          <Recorrido r={r} />
+        ))}
+      </ul>
+    )
+  }
+
+  <p class="mt-6 text-xs text-gris">
+    No se guardan IPs ni datos personales: cada navegador tiene un código anónimo al azar. La ubicación es aproximada (la calcula
+    Cloudflare) y tus visitas como administrador no se cuentan.
+  </p>
+</AdminLayout>
+
+<script>
+  // Actualiza «En vivo» cada 15 s sin recargar la página
+  const lista = document.getElementById('vivos')!;
+  const total = document.getElementById('vivos-total')!;
+  const texto = document.getElementById('vivos-texto')!;
+  const vacio = document.getElementById('vivos-vacio')!;
+  type Vivo = { visitante: string; ruta: string; lugar: string; dispositivo: string; so: string | null };
+
+  function fila(v: Vivo) {
+    const li = document.createElement('li');
+    li.className = 'flex flex-wrap justify-between gap-2 py-2';
+    const a = document.createElement('a');
+    a.href = `/admin/visitantes/${v.visitante}`;
+    a.className = 'font-medium text-navy-900 hover:text-naranja';
+    a.textContent = v.ruta;
+    const info = document.createElement('span');
+    info.className = 'text-gris';
+    info.textContent = `${v.lugar} · ${v.dispositivo}${v.so ? ` · ${v.so}` : ''}`;
+    li.append(a, info);
+    return li;
+  }
+
+  setInterval(async () => {
+    if (document.visibilityState !== 'visible') return;
+    const r = await fetch('/api/admin/en-vivo').catch(() => null);
+    if (!r?.ok) return;
+    const vivos = (await r.json()) as Vivo[];
+    lista.replaceChildren(...vivos.map(fila));
+    total.textContent = String(vivos.length);
+    texto.textContent = vivos.length === 1 ? 'persona' : 'personas';
+    vacio.classList.toggle('hidden', vivos.length > 0);
+  }, 15_000);
+</script>

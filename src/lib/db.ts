@@ -114,6 +114,24 @@ const MIGRACIONES = [
   `
   ALTER TABLE publicaciones ADD COLUMN ig_video TEXT;
   `,
+  `
+  ALTER TABLE visitas ADD COLUMN pv TEXT;
+  ALTER TABLE visitas ADD COLUMN sesion TEXT;
+  ALTER TABLE visitas ADD COLUMN pais TEXT;
+  ALTER TABLE visitas ADD COLUMN region TEXT;
+  ALTER TABLE visitas ADD COLUMN ciudad TEXT;
+  ALTER TABLE visitas ADD COLUMN so TEXT;
+  ALTER TABLE visitas ADD COLUMN idioma TEXT;
+  ALTER TABLE visitas ADD COLUMN pantalla TEXT;
+  ALTER TABLE visitas ADD COLUMN duracion INTEGER;
+  ALTER TABLE visitas ADD COLUMN scroll INTEGER;
+  ALTER TABLE visitas ADD COLUMN ultimo INTEGER;
+  CREATE INDEX idx_visitas_visitante ON visitas(visitante, ts);
+  CREATE INDEX idx_visitas_pv ON visitas(pv);
+  CREATE INDEX idx_visitas_sesion ON visitas(sesion);
+  CREATE INDEX idx_visitas_ultimo ON visitas(ultimo);
+  ALTER TABLE mensajes ADD COLUMN visitante TEXT;
+  `,
 ];
 
 function abrir() {

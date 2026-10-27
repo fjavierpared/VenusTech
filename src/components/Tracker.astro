@@ -1,5 +1,17 @@
 <script>
   // Analítica propia de VenusTech: sin cookies, los datos quedan en tu propio servidor.
+  // Código anónimo al azar para reconocer visitas que regresan (no contiene datos personales).
+  const nuevoId = () => Array.from(crypto.getRandomValues(new Uint8Array(8)), (b) => b.toString(16).padStart(2, '0')).join('');
+  let visitante: string | null = null;
+  try {
+    visitante = localStorage.getItem('vt_v');
+    if (!visitante || !/^[a-f0-9]{16}$/.test(visitante)) localStorage.setItem('vt_v', (visitante = nuevoId()));
+  } catch {
+    visitante = null;
+  }
+  window.vtVisitante = visitante ?? undefined;
+  const pv = nuevoId();
+
   function enviar(datos: Record<string, unknown>) {
     const cuerpo = JSON.stringify(datos);
     try {
@@ -8,7 +20,7 @@
     } catch {}
   }
 
-  window.vtTrack = (tipo, detalle) => enviar({ t: 'evento', tipo, detalle, ruta: location.pathname });
+  window.vtTrack = (tipo, detalle) => enviar({ t: 'evento', tipo, detalle, ruta: location.pathname, v: visitante });
 
   enviar({
     t: 'visita',
@@ -16,7 +28,33 @@
     ref: document.referrer,
     utm: new URLSearchParams(location.search).get('utm_source'),
     w: window.innerWidth,
+    v: visitante,
+    pv,
+    idioma: navigator.language,
+    pantalla: `${screen.width}x${screen.height}`,
   });
+
+  // Tiempo activo (solo con la pestaña visible) y hasta dónde bajó en la página
+  let activo = 0;
+  let desde = document.visibilityState === 'visible' ? performance.now() : 0;
+  let scroll = 0;
+  const medirScroll = () => {
+    const alto = document.documentElement.scrollHeight - innerHeight;
+    scroll = Math.max(scroll, alto > 0 ? Math.round((scrollY / alto) * 100) : 100);
+  };
+  const tiempo = () => activo + (desde ? performance.now() - desde : 0);
+  const ping = () => enviar({ t: 'ping', pv, dur: Math.round(tiempo()), scroll });
+  addEventListener('scroll', medirScroll, { passive: true });
+  medirScroll();
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+      activo = tiempo();
+      desde = 0;
+      ping();
+    } else desde = performance.now();
+  });
+  addEventListener('pagehide', ping);
+  setInterval(() => document.visibilityState === 'visible' && ping(), 30_000);
 
   document.addEventListener(
     'click',

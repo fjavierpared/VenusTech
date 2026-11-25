@@ -51,6 +51,13 @@ export function waLink(message = 'Hola, vengo de la web de VenusTech.') {
   return `https://wa.me/${SITE.whatsapp}?text=${encodeURIComponent(message)}`;
 }
 
+// VenusTech Shield: VPN privada. Vive en su propio sitio; aquí solo se enlaza.
+export const SHIELD = {
+  nombre: 'VenusTech Shield',
+  resumen: 'VPN privada con servidor propio: conexión cifrada para tu equipo, tus cámaras y tu negocio.',
+  url: 'https://vpn.venustechfp.com',
+} as const;
+
 export const NAV = [
   { href: '/servicios', label: 'Servicios' },
   { href: '/equipos', label: 'Equipos' },

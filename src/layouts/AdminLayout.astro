@@ -91,5 +91,9 @@ const activo = (href: string) => (href === '/admin' ? path === '/admin' : path.s
         <slot />
       </div>
     </main>
+    <script>
+      import { activarConfirmaciones } from '../scripts/dialogo';
+      activarConfirmaciones();
+    </script>
   </body>
 </html>

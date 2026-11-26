@@ -118,13 +118,13 @@ const fechaHora = (ts: number | null) =>
     </div>
     <div class="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-4">
       <form method="post">
-        <button name="accion" value="clave" class="rounded-full border border-slate-300 px-3 py-1.5 text-sm" onclick="return confirm('¿Generar una contraseña nueva? La actual dejará de servir y se cerrará su sesión en la app.')">
+        <button name="accion" value="clave" class="rounded-full border border-slate-300 px-3 py-1.5 text-sm" data-confirmar="¿Generar una contraseña nueva? La actual dejará de servir y se cerrará su sesión en la app.">
           Generar contraseña nueva
         </button>
       </form>
       <form method="post" class="flex flex-wrap items-center gap-2" autocomplete="off">
         <input id="clave-propia" name="clave" type="text" required minlength="8" maxlength="72" placeholder="Contraseña propia (mín. 8)" aria-label="Contraseña propia" spellcheck="false" autocomplete="new-password" class="w-52 rounded-full border border-slate-300 px-3 py-1.5 text-sm" />
-        <button name="accion" value="clave_propia" class="rounded-full border border-slate-300 px-3 py-1.5 text-sm" onclick="return confirm('¿Poner esta contraseña? La actual dejará de servir y se cerrará su sesión en la app.')">
+        <button name="accion" value="clave_propia" class="rounded-full border border-slate-300 px-3 py-1.5 text-sm" data-confirmar="¿Poner esta contraseña? La actual dejará de servir y se cerrará su sesión en la app.">
           Poner esta contraseña
         </button>
       </form>
@@ -133,7 +133,7 @@ const fechaHora = (ts: number | null) =>
           c.suspendido ? (
             <button name="accion" value="reactivar" class="rounded-full border border-emerald-300 px-3 py-1.5 text-sm text-emerald-800">Reactivar</button>
           ) : (
-            <button name="accion" value="suspender" class="rounded-full border border-amber-300 px-3 py-1.5 text-sm text-amber-800" onclick="return confirm('¿Suspender? Su VPN se desconecta hasta que lo reactives.')">
+            <button name="accion" value="suspender" class="rounded-full border border-amber-300 px-3 py-1.5 text-sm text-amber-800" data-confirmar="¿Suspender? Su VPN se desconecta hasta que lo reactives.">
               Suspender
             </button>
           )
@@ -180,7 +180,7 @@ const fechaHora = (ts: number | null) =>
           c.acceso_vps ? (
             <button name="accion" value="vps_off" class="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold">Quitar acceso</button>
           ) : (
-            <button name="accion" value="vps_on" class="rounded-full bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white" onclick="return confirm('¿Dar acceso a TODO el VPS (SSH, paneles, redes internas) a los dispositivos de este usuario? Solo para personal de confianza.')">
+            <button name="accion" value="vps_on" class="rounded-full bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white" data-confirmar="¿Dar acceso a TODO el VPS (SSH, paneles, redes internas) a los dispositivos de este usuario? Solo para personal de confianza.">
               Dar acceso
             </button>
           )
@@ -203,7 +203,7 @@ const fechaHora = (ts: number | null) =>
                 </span>
                 <form method="post">
                   <input type="hidden" name="disp" value={d.id} />
-                  <button name="accion" value="borrar_disp" class="rounded-full border border-red-200 px-3 py-1 text-xs text-red-700" onclick="return confirm('¿Liberar este dispositivo? Se desconecta y podrá entrar desde otro.')">
+                  <button name="accion" value="borrar_disp" class="rounded-full border border-red-200 px-3 py-1 text-xs text-red-700" data-confirmar="¿Liberar este dispositivo? Se desconecta y podrá entrar desde otro.">
                     Liberar
                   </button>
                 </form>
@@ -228,7 +228,7 @@ const fechaHora = (ts: number | null) =>
         <button name="accion" value="editar" class="rounded-full bg-navy-900 px-5 py-2.5 text-sm font-semibold text-white">Guardar</button>
         <span class="flex gap-2">
           <button name="accion" value="sincronizar" formnovalidate class="rounded-full border border-slate-300 px-3 py-1.5 text-xs">Reaplicar en servidor</button>
-          <button name="accion" value="borrar" formnovalidate class="rounded-full border border-red-200 px-3 py-1.5 text-xs text-red-700" onclick="return confirm('¿Borrar este usuario y sus dispositivos? No se puede deshacer.')">
+          <button name="accion" value="borrar" formnovalidate class="rounded-full border border-red-200 px-3 py-1.5 text-xs text-red-700" data-confirmar="¿Borrar este usuario y sus dispositivos? No se puede deshacer.">
             Borrar usuario
           </button>
         </span>

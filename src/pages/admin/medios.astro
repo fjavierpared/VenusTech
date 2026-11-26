@@ -105,7 +105,7 @@ const medios = listar();
                   <input type="hidden" name="id" value={m.id} />
                   <button
                     class="rounded-lg border border-red-200 px-3 py-1.5 text-xs text-red-700"
-                    onclick="return confirm('¿Eliminar este archivo? Si está en una publicación, dejará de verse.')"
+                    data-confirmar="¿Eliminar este archivo? Si está en una publicación, dejará de verse."
                   >
                     Eliminar
                   </button>

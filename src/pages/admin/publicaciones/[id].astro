@@ -279,7 +279,7 @@ const fechaCorta = (ts: number) => new Intl.DateTimeFormat('es-VE', { dateStyle:
             value="eliminar"
             formnovalidate
             class="w-full rounded-xl border border-red-200 bg-white px-3 py-2.5 text-sm text-red-700"
-            onclick="return confirm('¿Eliminar esta publicación definitivamente?')"
+            data-confirmar="¿Eliminar esta publicación definitivamente?"
           >
             Eliminar publicación
           </button>
@@ -333,6 +333,7 @@ const fechaCorta = (ts: number) => new Intl.DateTimeFormat('es-VE', { dateStyle:
 </style>
 
 <script>
+  import { avisar, pedir } from '../../../scripts/dialogo';
   const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
   const titulo = $<HTMLInputElement>('titulo');
   const slug = $<HTMLInputElement>('slug');
@@ -378,16 +379,16 @@ const fechaCorta = (ts: number) => new Intl.DateTimeFormat('es-VE', { dateStyle:
     }),
   );
 
-  $('tb-enlace').addEventListener('click', () => {
-    const url = prompt('Dirección del enlace (https://… o /contacto):');
+  $('tb-enlace').addEventListener('click', async () => {
+    const url = await pedir('Dirección del enlace (https://… o /contacto):', 'https://', { titulo: 'Insertar enlace', aceptar: 'Insertar' });
     if (url) insertar('[', `](${url})`, 'texto del enlace');
   });
 
-  $('tb-youtube').addEventListener('click', () => {
-    const url = prompt('Pega el enlace del video de YouTube:');
+  $('tb-youtube').addEventListener('click', async () => {
+    const url = await pedir('Pega el enlace del video de YouTube:', 'https://youtu.be/…', { titulo: 'Insertar video', aceptar: 'Insertar' });
     const id = url?.match(/(?:youtu\.be\/|v=|shorts\/|embed\/)([\w-]{11})/)?.[1];
     if (!url) return;
-    if (!id) return alert('No reconozco ese enlace de YouTube.');
+    if (!id) return avisar('No reconozco ese enlace de YouTube. Copia el enlace desde el botón "Compartir" del video.');
     insertar(
       `\n\n<div class="video"><iframe src="https://www.youtube-nocookie.com/embed/${id}" title="Video de YouTube" loading="lazy" allowfullscreen></iframe></div>\n\n`,
     );
@@ -412,12 +413,12 @@ const fechaCorta = (ts: number) => new Intl.DateTimeFormat('es-VE', { dateStyle:
     b.addEventListener('click', () => {
       const { url, tipo, alt } = b.dataset;
       if (modo === 'igvideo') {
-        if (!url!.endsWith('.mp4')) return alert('Instagram solo acepta videos MP4.');
+        if (!url!.endsWith('.mp4')) return void avisar('Instagram solo acepta videos MP4.');
         igVideo.value = url!;
         igVideoVista.innerHTML = `<video src="${url}" muted preload="metadata" class="max-h-56 w-full bg-navy-950"></video>`;
         cambios = true;
       } else if (modo === 'portada') {
-        if (tipo !== 'imagen') return alert('La portada debe ser una imagen.');
+        if (tipo !== 'imagen') return void avisar('La portada debe ser una imagen.');
         portada.value = url!;
         portadaVista.innerHTML = `<img src="${url}" alt="" class="h-full w-full object-cover">`;
       } else if (tipo === 'imagen') {

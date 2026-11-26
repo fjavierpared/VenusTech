@@ -28,7 +28,9 @@ const url = (process.env.WG_API_URL || 'http://venustechvpn:51821').replace(/\/$
     await new Promise((ok) => setTimeout(ok, 1500));
   }
   if (!r || !r.ok) { console.log('❌ wg-easy no aceptó la clave nueva (' + (r ? r.status : 'sin respuesta') + ').'); process.exit(1); }
-  const k = Buffer.from(fs.readFileSync(process.env.VT_KEY_FILE, 'utf8').trim(), 'base64');
+  const crudo = fs.readFileSync(process.env.VT_KEY_FILE);
+  const k = crudo.length === 32 ? crudo : Buffer.from(crudo.toString('utf8').trim(), 'base64'); // mismo criterio que src/lib/secretos.ts
+  if (k.length !== 32) { console.log('❌ La llave de cifrado de la web no es válida.'); process.exit(1); }
   const iv = randomBytes(12), c = createCipheriv('aes-256-gcm', k, iv), d = Buffer.concat([c.update(clave, 'utf8'), c.final()]);
   const cifrada = `v1:${iv.toString('base64url')}:${c.getAuthTag().toString('base64url')}:${d.toString('base64url')}`;
   const db = new DatabaseSync('/data/venustech.db');

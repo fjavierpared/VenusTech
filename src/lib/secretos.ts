@@ -13,7 +13,10 @@ function obtenerLlave() {
   if (llave !== undefined) return llave;
   const archivo = crudo('VT_KEY_FILE') ?? path.join(os.homedir(), '.config', 'venustech', 'clave');
   try {
-    const b = Buffer.from(readFileSync(archivo, 'utf8').trim(), 'base64');
+    // La llave puede estar como 32 bytes en bruto (así se creó secretos/clave)
+    // o como texto base64 (así la crea scripts/guardar-secreto.mjs).
+    const crudoArchivo = readFileSync(archivo);
+    const b = crudoArchivo.length === 32 ? crudoArchivo : Buffer.from(crudoArchivo.toString('utf8').trim(), 'base64');
     llave = b.length === 32 ? b : null;
   } catch {
     llave = null;

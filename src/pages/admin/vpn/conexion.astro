@@ -1,0 +1,65 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import VpnNav from '../../../components/admin/VpnNav.astro';
+import { probarConexion, guardarConexion, origenConexion, usuarioConexion } from '../../../lib/wgeasy';
+
+export const prerender = false;
+
+let error = '';
+let aviso = '';
+if (Astro.request.method === 'POST') {
+  const f = await Astro.request.formData();
+  try {
+    if (f.get('accion') === 'guardar') {
+      await guardarConexion(String(f.get('usuario') ?? ''), String(f.get('clave') ?? ''));
+      aviso = 'Contraseña verificada y guardada cifrada. Ya puedes crear clientes y entrar desde la app.';
+    }
+  } catch (e) {
+    error = e instanceof Error ? e.message : String(e);
+  }
+}
+const estado = await probarConexion();
+const origen = origenConexion();
+const campo = 'mt-1.5 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-navy-700';
+---
+
+<AdminLayout titulo="Conexión con el servidor VPN">
+  <VpnNav />
+
+  {error && <p class="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</p>}
+  {aviso && <p class="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">{aviso}</p>}
+
+  <div class="grid max-w-3xl gap-6">
+    <section class:list={['rounded-2xl border p-5', estado.ok ? 'border-emerald-200 bg-emerald-50' : 'border-red-200 bg-red-50']}>
+      <p class="text-lg font-semibold text-navy-900">{estado.ok ? '✅ Conectado' : '❌ Sin conexión'}</p>
+      <p class="mt-1 text-sm text-tinta">
+        {estado.mensaje}
+        {estado.ok && estado.dispositivos !== undefined && <> Dispositivos en el VPN: {estado.dispositivos}.</>}
+      </p>
+      {origen && <p class="mt-1 text-xs text-gris">Usuario: {usuarioConexion()} · guardado {origen === 'panel' ? 'desde este panel' : 'en el archivo .env'}</p>}
+      <form method="get" class="mt-3"><button class="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs">Probar de nuevo</button></form>
+    </section>
+
+    <section class="rounded-2xl border border-slate-200 bg-white p-5">
+      <h2 class="font-semibold text-navy-900">{origen ? 'Cambiar la contraseña de wg-easy' : 'Conectar con wg-easy'}</h2>
+      <p class="mt-1 text-sm text-gris">
+        Es la contraseña con la que entras al panel de wg-easy (por túnel SSH). Se hace una sola vez; repítelo solo si
+        cambias esa contraseña. Se prueba antes de guardar y se guarda cifrada.
+      </p>
+      <form method="post" class="mt-4 grid gap-4 sm:grid-cols-2" autocomplete="off">
+        <input type="hidden" name="accion" value="guardar" />
+        <label class="text-sm font-medium text-navy-900">
+          Usuario de wg-easy
+          <input id="usuario" name="usuario" value={usuarioConexion()} required class={campo} autocomplete="off" />
+        </label>
+        <label class="text-sm font-medium text-navy-900">
+          Contraseña de wg-easy
+          <input id="clave" name="clave" type="password" required class={campo} autocomplete="new-password" />
+        </label>
+        <div class="sm:col-span-2">
+          <button class="rounded-full bg-naranja px-5 py-2.5 text-sm font-semibold text-white hover:bg-naranja-600">Probar y guardar</button>
+        </div>
+      </form>
+    </section>
+  </div>
+</AdminLayout>

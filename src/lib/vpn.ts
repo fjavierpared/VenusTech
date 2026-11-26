@@ -162,6 +162,15 @@ export function generarClave() {
   return `${parte()}-${parte()}`;
 }
 
+/** Contraseña elegida a mano: si viene vacía se genera una. */
+function claveElegida(clave?: string | null) {
+  const c = (clave ?? '').trim(); // la app también recorta espacios al entrar
+  if (!c) return generarClave();
+  if (c.length < 8) throw new Error('La contraseña debe tener al menos 8 caracteres.');
+  if (c.length > 72) throw new Error('La contraseña es demasiado larga (máximo 72 caracteres).');
+  return c;
+}
+
 /** 0414-1234567 → 584141234567 */
 export function waNumero(tel: string | null | undefined) {
   if (!tel) return null;
@@ -202,6 +211,8 @@ export async function crearCliente(datos: {
   accesoVps?: boolean;
   /** null = sin vencimiento */
   dias: number | null;
+  /** vacía = se genera una */
+  clave?: string;
 }): Promise<{ id: number; clave: string }> {
   const nombre = datos.nombre.trim();
   const correo = datos.correo.trim().toLowerCase();
@@ -209,8 +220,8 @@ export async function crearCliente(datos: {
   if (!correoValido(correo)) throw new Error('El correo no es válido.');
   if (db.prepare('SELECT 1 FROM vpn_clientes WHERE correo = ?').get(correo)) throw new Error('Ya existe un usuario con ese correo.');
   const vence = venceDesdeDias(datos.dias); // valida antes de crear nada
+  const clave = claveElegida(datos.clave);
 
-  const clave = generarClave();
   const r = db
     .prepare(
       'INSERT INTO vpn_clientes (nombre, correo, whatsapp, notas, hash, max_dispositivos, acceso_vps, plan, vence_en, creado_en) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
@@ -258,8 +269,9 @@ export async function suspender(clienteId: number, suspendido: boolean) {
   await sincronizar(clienteId);
 }
 
-export function restablecerClave(clienteId: number) {
-  const clave = generarClave();
+/** Contraseña nueva (la indicada o una generada). Cierra sus sesiones abiertas en la app. */
+export function restablecerClave(clienteId: number, propia?: string) {
+  const clave = claveElegida(propia);
   db.prepare('UPDATE vpn_clientes SET hash = ? WHERE id = ?').run(hashPassword(clave), clienteId);
   // Cierra las sesiones abiertas en la app: tendrá que entrar con la clave nueva
   db.prepare('DELETE FROM vpn_sesiones WHERE cliente_id = ?').run(clienteId);

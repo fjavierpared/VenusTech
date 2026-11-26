@@ -39,6 +39,9 @@ if (Astro.request.method === 'POST') {
       case 'clave':
         claveNueva = restablecerClave(id);
         break;
+      case 'clave_propia':
+        claveNueva = restablecerClave(id, g('clave'));
+        break;
       case 'suspender':
         await suspender(id, true);
         aviso = 'Usuario suspendido: su VPN se desconectó.';
@@ -88,7 +91,7 @@ const fechaHora = (ts: number | null) =>
   {
     claveNueva && (
       <VpnCredenciales
-        titulo="Contraseña nueva generada (la anterior ya no sirve)"
+        titulo="Contraseña nueva (la anterior ya no sirve)"
         correo={c.correo}
         clave={claveNueva}
         wa={enlaceWa(c.whatsapp, mensajeClaveNueva(c, claveNueva))}
@@ -117,6 +120,12 @@ const fechaHora = (ts: number | null) =>
       <form method="post">
         <button name="accion" value="clave" class="rounded-full border border-slate-300 px-3 py-1.5 text-sm" onclick="return confirm('¿Generar una contraseña nueva? La actual dejará de servir y se cerrará su sesión en la app.')">
           Generar contraseña nueva
+        </button>
+      </form>
+      <form method="post" class="flex flex-wrap items-center gap-2" autocomplete="off">
+        <input id="clave-propia" name="clave" type="text" required minlength="8" maxlength="72" placeholder="Contraseña propia (mín. 8)" aria-label="Contraseña propia" spellcheck="false" autocomplete="new-password" class="w-52 rounded-full border border-slate-300 px-3 py-1.5 text-sm" />
+        <button name="accion" value="clave_propia" class="rounded-full border border-slate-300 px-3 py-1.5 text-sm" onclick="return confirm('¿Poner esta contraseña? La actual dejará de servir y se cerrará su sesión en la app.')">
+          Poner esta contraseña
         </button>
       </form>
       <form method="post">

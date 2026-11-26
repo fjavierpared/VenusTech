@@ -23,6 +23,7 @@ if (Astro.request.method === 'POST') {
       maxDispositivos: Number(v.dispositivos) || 2,
       accesoVps: v.acceso_vps === '1',
       dias: v.duracion === 'dias' ? Number(v.dias) : null,
+      clave: v.clave,
     });
   } catch (e) {
     error = e instanceof Error ? e.message : String(e);
@@ -64,6 +65,11 @@ const libresVps = c ? null : await ipsVpsLibres();
             <label class="text-sm font-medium text-navy-900">
               Correo (será su usuario)
               <input id="correo" name="correo" type="email" required value={v.correo} class={campo} autocomplete="off" />
+            </label>
+            <label class="text-sm font-medium text-navy-900 sm:col-span-2">
+              Contraseña (opcional)
+              <input id="clave" name="clave" type="text" minlength="8" maxlength="72" value={v.clave} placeholder="Déjala vacía y se genera una segura" class={campo} autocomplete="new-password" spellcheck="false" />
+              <span class="mt-1 block text-xs font-normal text-gris">Mínimo 8 caracteres. Se verá una sola vez al crear el usuario.</span>
             </label>
             <label class="text-sm font-medium text-navy-900">
               WhatsApp (opcional)

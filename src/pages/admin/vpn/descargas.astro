@@ -16,6 +16,8 @@ const tam = (archivo: string) => {
 const lista = [
   { ...APPS.android, icon: 'smartphone' as const, nota: 'Al instalar, Android pide permitir "instalar apps de origen desconocido".' },
   { ...APPS.windows, icon: 'monitor' as const, nota: 'Si sale "Windows protegió su PC": "Más información" → "Ejecutar de todas formas".' },
+  { ...APPS.linuxDeb, icon: 'laptop' as const, nota: `Doble clic para instalar, o en la terminal: sudo apt install ./${APPS.linuxDeb.archivo}. Al conectar pide la clave de administrador.` },
+  { ...APPS.linuxTar, icon: 'laptop' as const, nota: 'Descomprimir y ejecutar: sudo ./install.sh (instala lo necesario según la distribución).' },
 ].map((a) => ({ ...a, url: urlDescarga(a), tam: tam(a.archivo) }));
 ---
 

@@ -12,10 +12,12 @@ export const SERVIDOR_ETIQUETA = 'Europa · Servidor VenusTech';
 // Instaladores de VenusTech Shield: privados, se descargan solo desde el panel
 // (archivos en DATA_DIR/descargas). Al sacar una versión nueva: copiar los archivos allí
 // y cambiar APP_VERSION.
-export const APP_VERSION = '0.2.0';
+export const APP_VERSION = '0.3.0';
 export const APPS = {
   android: { nombre: 'Android', detalle: 'Android 8 o superior', archivo: `VenusTechShield-${APP_VERSION}.apk`, tipo: 'application/vnd.android.package-archive' },
   windows: { nombre: 'Windows', detalle: 'Windows 10 y 11 (64 bits)', archivo: `VenusTechShield-${APP_VERSION}-Windows.exe`, tipo: 'application/vnd.microsoft.portable-executable' },
+  linuxDeb: { nombre: 'Linux (Ubuntu / Debian)', detalle: 'Ubuntu, Debian, Mint, Pop!_OS… · 32 y 64 bits', archivo: `VenusTechShield-${APP_VERSION}-Linux.deb`, tipo: 'application/vnd.debian.binary-package' },
+  linuxTar: { nombre: 'Linux (otras)', detalle: 'Fedora, Arch, openSUSE y otras · 32 y 64 bits', archivo: `VenusTechShield-${APP_VERSION}-Linux.tar.gz`, tipo: 'application/gzip' },
 } as const;
 export const urlDescarga = (a: { archivo: string }) => `/admin/vpn/descargas/${a.archivo}`;
 
@@ -334,7 +336,7 @@ export function mensajeBienvenida(c: Cliente, clave: string) {
   return [
     `Hola ${c.nombre.split(' ')[0]}, ya tienes acceso a VenusTech Shield 🛡️`,
     '',
-    '1) Instala la app VenusTech Shield que te envío por aquí (Android o Windows).',
+    '1) Instala la app VenusTech Shield que te envío por aquí (Android, Windows o Linux).',
     '2) Entra con estos datos:',
     `Usuario: ${c.correo}`,
     `Contraseña: ${clave}`,
@@ -389,7 +391,7 @@ export async function loginApp(d: { correo: string; clave: string; deviceId: str
     const usados = dispositivos(c.id).length;
     if (usados >= c.max_dispositivos) {
       throw new ErrorApp(
-        `Ya usas tus ${c.max_dispositivos} dispositivos. Escríbenos por WhatsApp para liberar uno.`,
+        `Ya usas tus ${c.max_dispositivos} dispositivos. Contacta a soporte para liberar uno.`,
         403,
       );
     }
@@ -407,7 +409,7 @@ export async function loginApp(d: { correo: string; clave: string; deviceId: str
       await wg.borrarCliente(wgId);
       db.prepare('DELETE FROM vpn_dispositivos WHERE id = ?').run(disp.id);
       console.error('[vpn] no se pudo asignar IP', e);
-      throw new ErrorApp('No pudimos preparar tu acceso. Escríbenos por WhatsApp.', 503);
+      throw new ErrorApp('No pudimos preparar tu acceso. Contacta a soporte.', 503);
     }
   }
 

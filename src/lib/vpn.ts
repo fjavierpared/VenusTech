@@ -9,6 +9,91 @@ export const DIAS_AVISO = 7; // "por vencer" cuando faltan 7 días o menos
 export const SERVIDOR_ETIQUETA = 'Europa · Servidor VenusTech';
 export const METODOS = ['Binance', 'AirTM', 'Efectivo', 'Transferencia', 'Cortesía'] as const;
 
+// ---------- IPs y acceso al VPS ----------
+// Red del VPN: 10.8.0.0/16. Las IPs 10.8.255.1–10.8.255.30 (10.8.255.0/27) son las únicas
+// que el firewall del VPN (hooks de wg-easy, cadena VT_GUARD) deja llegar al SSH del VPS.
+// Están al final a propósito: wg-easy reparte desde la más baja, así que un dispositivo
+// creado fuera del CRM nunca recibe acceso al VPS por accidente.
+export const VPS_IPS = { prefijo: '10.8.255.', desde: 1, hasta: 30 } as const;
+export const VPS_RANGO_TEXTO = `${VPS_IPS.prefijo}${VPS_IPS.desde}–${VPS_IPS.prefijo}${VPS_IPS.hasta}`;
+
+export function esIpVps(ip: string | null | undefined) {
+  if (!ip?.startsWith(VPS_IPS.prefijo)) return false;
+  const n = Number(ip.slice(VPS_IPS.prefijo.length));
+  return Number.isInteger(n) && n >= VPS_IPS.desde && n <= VPS_IPS.hasta;
+}
+
+async function ipsUsadas() {
+  return new Set((await wg.listarClientes()).map((c) => c.ipv4Address));
+}
+
+/** IPs libres del grupo con acceso al VPS (null si el servidor VPN no responde). */
+export async function ipsVpsLibres(): Promise<number | null> {
+  try {
+    const usadas = await ipsUsadas();
+    let libres = 0;
+    for (let n = VPS_IPS.desde; n <= VPS_IPS.hasta; n++) if (!usadas.has(VPS_IPS.prefijo + n)) libres++;
+    return libres;
+  } catch {
+    return null;
+  }
+}
+
+function ipLibre(usadas: Set<string>, vps: boolean): string {
+  if (vps) {
+    for (let n = VPS_IPS.desde; n <= VPS_IPS.hasta; n++) {
+      const ip = VPS_IPS.prefijo + n;
+      if (!usadas.has(ip)) return ip;
+    }
+    throw new Error(
+      `Ya no quedan IPs con acceso al VPS (${VPS_IPS.hasta - VPS_IPS.desde + 1} dispositivos en total). Quita el acceso a otro cliente o libera un dispositivo.`,
+    );
+  }
+  // 10.8.0.2 – 10.8.254.254 (10.8.0.1 es el servidor y 10.8.255.x queda reservado)
+  for (let a = 0; a <= 254; a++) {
+    for (let b = a === 0 ? 2 : 1; b <= 254; b++) {
+      const ip = `10.8.${a}.${b}`;
+      if (!usadas.has(ip)) return ip;
+    }
+  }
+  throw new Error('La red del VPN está llena.');
+}
+
+/**
+ * Pone el dispositivo en el grupo de IPs que le toca según el permiso del cliente.
+ * Si cambia, la app recibe la configuración nueva en su próxima actualización.
+ */
+async function ubicarDispositivo(d: Pick<Dispositivo, 'id' | 'wg_id'>, vps: boolean, usadas?: Set<string>) {
+  const actual = (await wg.obtenerCliente(d.wg_id)).ipv4Address;
+  let ip = actual;
+  if (esIpVps(actual) !== vps) {
+    const u = usadas ?? (await ipsUsadas());
+    ip = ipLibre(u, vps);
+    await wg.actualizarCliente(d.wg_id, { ipv4Address: ip });
+    u.delete(actual);
+    u.add(ip);
+  }
+  db.prepare('UPDATE vpn_dispositivos SET ip = ? WHERE id = ?').run(ip, d.id);
+  return ip;
+}
+
+/** Da o quita a un cliente el acceso por SSH al VPS para todos sus dispositivos. */
+export async function cambiarAccesoVps(clienteId: number, activar: boolean) {
+  const c = cliente(clienteId);
+  if (!c) throw new Error('Cliente no encontrado.');
+  const lista = dispositivos(clienteId);
+  const usadas = await ipsUsadas();
+  if (activar) {
+    // Comprobar que alcanzan las IPs antes de mover nada
+    const porMover = (await Promise.all(lista.map((d) => wg.obtenerCliente(d.wg_id)))).filter((w) => !esIpVps(w.ipv4Address)).length;
+    let libres = 0;
+    for (let n = VPS_IPS.desde; n <= VPS_IPS.hasta; n++) if (!usadas.has(VPS_IPS.prefijo + n)) libres++;
+    if (porMover > libres) throw new Error(`Solo quedan ${libres} IPs con acceso al VPS y este cliente necesita ${porMover}.`);
+  }
+  db.prepare('UPDATE vpn_clientes SET acceso_vps = ? WHERE id = ?').run(activar ? 1 : 0, clienteId);
+  for (const d of lista) await ubicarDispositivo(d, activar, usadas);
+}
+
 export interface Plan {
   id: number;
   nombre: string;
@@ -29,6 +114,8 @@ export interface Cliente {
   plan: string | null;
   vence_en: number | null;
   suspendido: number;
+  /** 1 = sus dispositivos pueden entrar por SSH al VPS */
+  acceso_vps: number;
   ultimo_acceso: number | null;
   creado_en: number;
 }
@@ -53,6 +140,7 @@ export interface Dispositivo {
   device_id: string;
   nombre: string;
   wg_id: number;
+  ip: string | null;
   creado_en: number;
   ultimo_acceso: number | null;
 }
@@ -157,6 +245,7 @@ export async function crearCliente(datos: {
   whatsapp?: string;
   notas?: string;
   maxDispositivos?: number;
+  accesoVps?: boolean;
   pago: DatosPago;
 }): Promise<{ id: number; clave: string }> {
   const nombre = datos.nombre.trim();
@@ -170,9 +259,12 @@ export async function crearCliente(datos: {
   const ahora = Date.now();
   const r = db
     .prepare(
-      'INSERT INTO vpn_clientes (nombre, correo, whatsapp, notas, hash, max_dispositivos, creado_en) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO vpn_clientes (nombre, correo, whatsapp, notas, hash, max_dispositivos, acceso_vps, creado_en) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
     )
-    .run(nombre, correo, datos.whatsapp?.trim() || null, datos.notas?.trim() || null, hashPassword(clave), datos.maxDispositivos ?? 2, ahora);
+    .run(
+      nombre, correo, datos.whatsapp?.trim() || null, datos.notas?.trim() || null, hashPassword(clave),
+      datos.maxDispositivos ?? 2, datos.accesoVps ? 1 : 0, ahora,
+    );
   const id = Number(r.lastInsertRowid);
   await registrarPago(id, datos.pago, pago);
   return { id, clave };
@@ -234,6 +326,7 @@ export async function sincronizar(clienteId: number) {
   const activo = tieneAcceso(c);
   for (const d of dispositivos(clienteId)) {
     await wg.actualizarCliente(d.wg_id, { enabled: activo, venceEn: c.vence_en });
+    await ubicarDispositivo(d, !!c.acceso_vps);
   }
 }
 
@@ -350,6 +443,15 @@ export async function loginApp(d: { correo: string; clave: string; deviceId: str
       .prepare('INSERT INTO vpn_dispositivos (cliente_id, device_id, nombre, wg_id, creado_en) VALUES (?, ?, ?, ?, ?)')
       .run(c.id, deviceId, nombre, wgId, Date.now());
     disp = db.prepare('SELECT * FROM vpn_dispositivos WHERE id = ?').get(Number(r.lastInsertRowid)) as unknown as Dispositivo;
+    // La IP se fija antes de entregar la configuración: con o sin acceso al VPS
+    try {
+      await ubicarDispositivo(disp, !!c.acceso_vps);
+    } catch (e) {
+      await wg.borrarCliente(wgId);
+      db.prepare('DELETE FROM vpn_dispositivos WHERE id = ?').run(disp.id);
+      console.error('[vpn] no se pudo asignar IP', e);
+      throw new ErrorApp('No pudimos preparar tu acceso. Escríbenos por WhatsApp.', 503);
+    }
   }
 
   const token = randomBytes(32).toString('base64url');

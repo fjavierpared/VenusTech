@@ -49,14 +49,18 @@ export async function obtenerCliente(id: number): Promise<WgCliente> {
   return (await (await llamar('GET', `/client/${id}`)).json()) as WgCliente;
 }
 
-/** Cambia activo/vencimiento conservando el resto de la configuración del cliente. */
-export async function actualizarCliente(id: number, cambios: { enabled?: boolean; venceEn?: number | null; nombre?: string }) {
+/** Cambia activo/vencimiento/nombre/IP conservando el resto de la configuración del cliente. */
+export async function actualizarCliente(
+  id: number,
+  cambios: { enabled?: boolean; venceEn?: number | null; nombre?: string; ipv4Address?: string },
+) {
   const actual = await obtenerCliente(id);
   const datos: Record<string, unknown> = { ...actual };
   for (const k of SOLO_LECTURA) delete datos[k];
   if (cambios.enabled !== undefined) datos.enabled = cambios.enabled;
   if (cambios.venceEn !== undefined) datos.expiresAt = iso(cambios.venceEn);
   if (cambios.nombre !== undefined) datos.name = cambios.nombre;
+  if (cambios.ipv4Address !== undefined) datos.ipv4Address = cambios.ipv4Address;
   await llamar('POST', `/client/${id}`, datos);
 }
 

@@ -2,7 +2,7 @@
 import AdminLayout from '../../../../layouts/AdminLayout.astro';
 import VpnNav from '../../../../components/admin/VpnNav.astro';
 import VpnCredenciales from '../../../../components/admin/VpnCredenciales.astro';
-import { planes, crearCliente, cliente, METODOS, dinero, enlaceWa, mensajeBienvenida, type DatosPago } from '../../../../lib/vpn';
+import { planes, crearCliente, cliente, METODOS, dinero, enlaceWa, mensajeBienvenida, ipsVpsLibres, VPS_RANGO_TEXTO, type DatosPago } from '../../../../lib/vpn';
 
 export const prerender = false;
 
@@ -23,6 +23,7 @@ if (Astro.request.method === 'POST') {
       whatsapp: v.whatsapp,
       notas: v.notas,
       maxDispositivos: Number(v.dispositivos) || 2,
+      accesoVps: v.acceso_vps === '1',
       pago: {
         plan,
         diasCortesia: Number(v.dias),
@@ -36,6 +37,7 @@ if (Astro.request.method === 'POST') {
   }
 }
 const c = creado ? cliente(creado.id) : null;
+const libresVps = c ? null : await ipsVpsLibres();
 ---
 
 <AdminLayout titulo="Nuevo cliente VPN">
@@ -82,6 +84,17 @@ const c = creado ? cliente(creado.id) : null;
             <label class="text-sm font-medium text-navy-900 sm:col-span-2">
               Notas (opcional)
               <textarea id="notas" name="notas" rows="2" class={campo}>{v.notas}</textarea>
+            </label>
+            <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-300 p-3 text-sm sm:col-span-2 has-[:checked]:border-amber-400 has-[:checked]:bg-amber-50">
+              <input id="acceso_vps" type="checkbox" name="acceso_vps" value="1" checked={v.acceso_vps === '1'} class="mt-0.5 size-4 accent-amber-600" />
+              <span>
+                <span class="block font-semibold text-navy-900">Acceso al VPS (SSH)</span>
+                <span class="block text-gris">
+                  Solo para ti o personal de confianza. Sus dispositivos reciben una IP fija del grupo {VPS_RANGO_TEXTO}, la única
+                  que el firewall deja entrar al SSH del VPS (igual pide tu clave o llave).
+                  {libresVps !== null && <> Quedan <strong>{libresVps}</strong> IPs libres.</>}
+                </span>
+              </span>
             </label>
           </div>
         </section>

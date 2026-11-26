@@ -194,6 +194,11 @@ const MIGRACIONES = [
     creado_en INTEGER NOT NULL
   );
   `,
+  // CRM VPN: acceso al VPS (SSH) por cliente e IP de cada dispositivo
+  `
+  ALTER TABLE vpn_clientes ADD COLUMN acceso_vps INTEGER NOT NULL DEFAULT 0;
+  ALTER TABLE vpn_dispositivos ADD COLUMN ip TEXT;
+  `,
 ];
 
 function abrir() {

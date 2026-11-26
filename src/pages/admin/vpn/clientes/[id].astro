@@ -6,7 +6,8 @@ import Icon from '../../../../components/Icon.astro';
 import {
   cliente, dispositivos, pagosDe, planes, METODOS, ESTADOS, estadoDe, fechaCorta, dinero, enlaceWa,
   registrarPago, anularPago, editarCliente, suspender, restablecerClave, borrarDispositivo, borrarCliente, sincronizar,
-  mensajeClaveNueva, mensajePagoRecibido, mensajeRecordatorio, type DatosPago,
+  mensajeClaveNueva, mensajePagoRecibido, mensajeRecordatorio, cambiarAccesoVps, esIpVps, ipsVpsLibres, VPS_RANGO_TEXTO,
+  type DatosPago,
 } from '../../../../lib/vpn';
 
 export const prerender = false;
@@ -60,6 +61,14 @@ if (Astro.request.method === 'POST') {
         await borrarDispositivo(Number(g('disp')));
         aviso = 'Dispositivo liberado: puede entrar desde otro teléfono.';
         break;
+      case 'vps_on':
+        await cambiarAccesoVps(id, true);
+        aviso = 'Acceso al VPS activado. Sus dispositivos lo tendrán en cuanto la app se actualice (al abrirla).';
+        break;
+      case 'vps_off':
+        await cambiarAccesoVps(id, false);
+        aviso = 'Acceso al VPS quitado. Sus dispositivos lo pierden en cuanto la app se actualice; el firewall ya no los deja pasar.';
+        break;
       case 'sincronizar':
         await sincronizar(id);
         aviso = 'Estado aplicado de nuevo en el servidor VPN.';
@@ -77,6 +86,7 @@ const c = cliente(id)!;
 const estado = estadoDe(c);
 const disp = dispositivos(id);
 const pagos = pagosDe(id);
+const libresVps = await ipsVpsLibres();
 const lista = planes();
 const total = pagos.reduce((s, p) => s + p.monto, 0);
 const waPago = pagoOk ? enlaceWa(c.whatsapp, mensajePagoRecibido(c)) : null;
@@ -205,6 +215,23 @@ const fechaHora = (ts: number | null) =>
     <section class="rounded-2xl border border-slate-200 bg-white p-5">
       <h2 class="font-semibold text-navy-900">Dispositivos ({disp.length} de {c.max_dispositivos})</h2>
       <p class="text-sm text-gris">Se agregan solos cuando entra a la app desde un teléfono nuevo.</p>
+      <form method="post" class:list={['mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3 text-sm', c.acceso_vps ? 'border-amber-300 bg-amber-50' : 'border-slate-200 bg-slate-50']}>
+        <span class="min-w-0">
+          <span class="block font-semibold text-navy-900">Acceso al VPS (SSH): {c.acceso_vps ? 'Sí' : 'No'}</span>
+          <span class="block text-xs text-gris">
+            IPs del grupo {VPS_RANGO_TEXTO}{libresVps !== null && <> · quedan {libresVps} libres</>}
+          </span>
+        </span>
+        {
+          c.acceso_vps ? (
+            <button name="accion" value="vps_off" class="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold">Quitar acceso</button>
+          ) : (
+            <button name="accion" value="vps_on" class="rounded-full bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white" onclick="return confirm('¿Dar acceso por SSH al VPS a los dispositivos de este cliente? Solo para personal de confianza.')">
+              Dar acceso
+            </button>
+          )
+        }
+      </form>
       {
         disp.length === 0 ? (
           <p class="mt-4 rounded-xl bg-slate-50 p-5 text-center text-sm text-gris">Aún no ha entrado a la app desde ningún dispositivo.</p>
@@ -214,7 +241,11 @@ const fechaHora = (ts: number | null) =>
               <li class="flex items-center justify-between gap-3 py-2.5 text-sm">
                 <span class="min-w-0">
                   <span class="block truncate font-medium text-navy-900">{d.nombre}</span>
-                  <span class="block text-xs text-gris">Desde {fechaCorta(d.creado_en)} · último uso {fechaHora(d.ultimo_acceso)}</span>
+                  <span class="block text-xs text-gris">
+                    IP <span class="font-mono">{d.ip ?? '—'}</span>
+                    {esIpVps(d.ip) && <span class="ml-1 rounded bg-amber-100 px-1.5 py-0.5 font-semibold text-amber-800">SSH al VPS</span>}
+                    · desde {fechaCorta(d.creado_en)} · último uso {fechaHora(d.ultimo_acceso)}
+                  </span>
                 </span>
                 <form method="post">
                   <input type="hidden" name="disp" value={d.id} />

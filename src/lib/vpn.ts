@@ -9,14 +9,15 @@ const DIA = 24 * 60 * 60 * 1000;
 export const DIAS_AVISO = 7; // "por vencer" cuando faltan 7 días o menos
 export const SERVIDOR_ETIQUETA = 'Europa · Servidor VenusTech';
 
-// Instaladores de VenusTech Shield (se publican en vpn.venustechfp.com/descargas).
-// Al sacar una versión nueva: copiar los archivos allí y cambiar APP_VERSION.
+// Instaladores de VenusTech Shield: privados, se descargan solo desde el panel
+// (archivos en DATA_DIR/descargas). Al sacar una versión nueva: copiar los archivos allí
+// y cambiar APP_VERSION.
 export const APP_VERSION = '0.2.0';
-const DESCARGAS = 'https://vpn.venustechfp.com/descargas';
 export const APPS = {
-  android: { nombre: 'Android', detalle: 'Android 8 o superior', url: `${DESCARGAS}/VenusTechShield-${APP_VERSION}.apk` },
-  windows: { nombre: 'Windows', detalle: 'Windows 10 y 11 (64 bits)', url: `${DESCARGAS}/VenusTechShield-${APP_VERSION}-Windows.exe` },
+  android: { nombre: 'Android', detalle: 'Android 8 o superior', archivo: `VenusTechShield-${APP_VERSION}.apk`, tipo: 'application/vnd.android.package-archive' },
+  windows: { nombre: 'Windows', detalle: 'Windows 10 y 11 (64 bits)', archivo: `VenusTechShield-${APP_VERSION}-Windows.exe`, tipo: 'application/vnd.microsoft.portable-executable' },
 } as const;
+export const urlDescarga = (a: { archivo: string }) => `/admin/vpn/descargas/${a.archivo}`;
 
 // ---------- IPs y acceso al VPS ----------
 // Red del VPN: 10.8.0.0/16. Las IPs 10.8.255.1–10.8.255.30 (10.8.255.0/27) son las únicas
@@ -283,9 +284,7 @@ export function mensajeBienvenida(c: Cliente, clave: string) {
   return [
     `Hola ${c.nombre.split(' ')[0]}, ya tienes acceso a VenusTech Shield 🛡️`,
     '',
-    '1) Instala la app:',
-    `   Android: ${APPS.android.url}`,
-    `   Windows: ${APPS.windows.url}`,
+    '1) Instala la app VenusTech Shield que te envío por aquí (Android o Windows).',
     '2) Entra con estos datos:',
     `Usuario: ${c.correo}`,
     `Contraseña: ${clave}`,

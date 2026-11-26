@@ -2,22 +2,29 @@
 import AdminLayout from '../../../layouts/AdminLayout.astro';
 import VpnNav from '../../../components/admin/VpnNav.astro';
 import Icon from '../../../components/Icon.astro';
-import { APPS, APP_VERSION } from '../../../lib/vpn';
+import { existsSync, statSync } from 'node:fs';
+import path from 'node:path';
+import { DATA_DIR } from '../../../lib/db';
+import { APPS, APP_VERSION, urlDescarga } from '../../../lib/vpn';
 
 export const prerender = false;
 
+const tam = (archivo: string) => {
+  const f = path.join(DATA_DIR, 'descargas', archivo);
+  return existsSync(f) ? `${(statSync(f).size / 1024 / 1024).toFixed(1)} MB` : null;
+};
 const lista = [
   { ...APPS.android, icon: 'smartphone' as const, nota: 'Al instalar, Android pide permitir "instalar apps de origen desconocido".' },
   { ...APPS.windows, icon: 'monitor' as const, nota: 'Si sale "Windows protegió su PC": "Más información" → "Ejecutar de todas formas".' },
-];
+].map((a) => ({ ...a, url: urlDescarga(a), tam: tam(a.archivo) }));
 ---
 
 <AdminLayout titulo="Descargar VenusTech Shield">
   <VpnNav />
 
   <p class="mb-4 max-w-3xl text-sm text-gris">
-    Versión {APP_VERSION}. Descárgalas aquí o copia el enlace para enviarlo por WhatsApp. Sin un usuario creado en este panel,
-    la app no deja entrar.
+    Versión {APP_VERSION}. Solo se descargan desde este panel: bájala y envía el archivo por WhatsApp a quien le creaste
+    usuario. Sin un usuario creado aquí, la app no deja entrar.
   </p>
 
   <div class="grid max-w-3xl gap-4 sm:grid-cols-2">
@@ -28,31 +35,19 @@ const lista = [
             <Icon name={a.icon} size={24} />
           </span>
           <h2 class="mt-4 text-lg font-bold text-navy-900">VenusTech Shield para {a.nombre}</h2>
-          <p class="text-sm text-gris">{a.detalle}</p>
+          <p class="text-sm text-gris">{a.detalle}{a.tam && <> · {a.tam}</>}</p>
           <p class="mt-2 flex-1 text-xs text-gris">{a.nota}</p>
-          <div class="mt-4 flex flex-wrap gap-2">
-            <a href={a.url} download class="inline-flex items-center gap-1.5 rounded-full bg-naranja px-4 py-2 text-sm font-semibold text-white hover:bg-naranja-600">
-              <Icon name="download" size={16} /> Descargar
-            </a>
-            <button type="button" data-copiar={a.url} class="rounded-full border border-slate-300 px-4 py-2 text-sm">Copiar enlace</button>
+          <div class="mt-4">
+            {a.tam ? (
+              <a href={a.url} download class="inline-flex items-center gap-1.5 rounded-full bg-naranja px-4 py-2 text-sm font-semibold text-white hover:bg-naranja-600">
+                <Icon name="download" size={16} /> Descargar
+              </a>
+            ) : (
+              <p class="text-sm text-red-700">Falta el archivo {a.archivo} en data/descargas.</p>
+            )}
           </div>
         </section>
       ))
     }
   </div>
 </AdminLayout>
-
-<script>
-  document.querySelectorAll<HTMLButtonElement>('[data-copiar]').forEach((b) =>
-    b.addEventListener('click', async () => {
-      try {
-        await navigator.clipboard.writeText(b.dataset.copiar!);
-        const t = b.textContent;
-        b.textContent = '¡Copiado!';
-        setTimeout(() => (b.textContent = t), 1500);
-      } catch {
-        prompt('Copia el enlace:', b.dataset.copiar);
-      }
-    }),
-  );
-</script>

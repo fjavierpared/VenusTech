@@ -1,0 +1,57 @@
+---
+// Muestra usuario y contraseña recién generados (solo se ven una vez) con botón para enviarlos por WhatsApp.
+import Icon from '../Icon.astro';
+
+interface Props {
+  titulo: string;
+  correo: string;
+  clave: string;
+  wa: string | null;
+  mensaje: string;
+}
+const { titulo, correo, clave, wa, mensaje } = Astro.props;
+---
+
+<section class="mb-6 rounded-2xl border-2 border-emerald-300 bg-emerald-50 p-5">
+  <p class="font-semibold text-emerald-900">{titulo}</p>
+  <p class="mt-1 text-sm text-emerald-800">
+    Guárdalos o envíalos ahora: por seguridad la contraseña no se vuelve a mostrar. Si se pierde, genera otra.
+  </p>
+  <dl class="mt-4 grid gap-3 sm:grid-cols-2">
+    <div class="rounded-xl bg-white p-3">
+      <dt class="text-xs font-semibold tracking-wide text-gris uppercase">Usuario</dt>
+      <dd class="mt-1 font-mono text-base break-all text-navy-900">{correo}</dd>
+    </div>
+    <div class="rounded-xl bg-white p-3">
+      <dt class="text-xs font-semibold tracking-wide text-gris uppercase">Contraseña</dt>
+      <dd class="mt-1 font-mono text-lg font-bold tracking-wider text-navy-900">{clave}</dd>
+    </div>
+  </dl>
+  <div class="mt-4 flex flex-wrap gap-2">
+    {
+      wa ? (
+        <a href={wa} target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 rounded-full bg-[#25D366] px-4 py-2 text-sm font-semibold text-[#073b1d]">
+          <Icon name="whatsapp" size={16} /> Enviar por WhatsApp
+        </a>
+      ) : (
+        <span class="text-sm text-emerald-900">Sin número de WhatsApp: copia el mensaje de abajo.</span>
+      )
+    }
+    <button type="button" data-copiar={mensaje} class="rounded-full border border-emerald-400 bg-white px-4 py-2 text-sm font-semibold text-emerald-900">
+      Copiar mensaje
+    </button>
+  </div>
+</section>
+
+<script>
+  document.querySelectorAll<HTMLButtonElement>('[data-copiar]').forEach((b) =>
+    b.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(b.dataset.copiar ?? '');
+        b.textContent = 'Copiado ✓';
+      } catch {
+        b.textContent = 'No se pudo copiar';
+      }
+    }),
+  );
+</script>

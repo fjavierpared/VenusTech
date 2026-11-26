@@ -1,0 +1,60 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import VpnNav from '../../../components/admin/VpnNav.astro';
+import { planes, guardarPlan } from '../../../lib/vpn';
+
+export const prerender = false;
+
+let error = '';
+let aviso = '';
+if (Astro.request.method === 'POST') {
+  const f = await Astro.request.formData();
+  try {
+    guardarPlan({
+      id: f.get('id') ? Number(f.get('id')) : undefined,
+      nombre: String(f.get('nombre') ?? ''),
+      dias: Number(f.get('dias')),
+      precio: Number(String(f.get('precio') ?? '').replace(',', '.')),
+      activo: f.get('activo') === '1',
+    });
+    aviso = 'Plan guardado. Los precios nuevos aplican a los próximos pagos; lo ya cobrado no cambia.';
+  } catch (e) {
+    error = e instanceof Error ? e.message : String(e);
+  }
+}
+const lista = planes(false);
+const campo = 'mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-navy-700';
+---
+
+<AdminLayout titulo="Planes y precios">
+  <VpnNav />
+
+  {error && <p class="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</p>}
+  {aviso && <p class="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">{aviso}</p>}
+
+  <div class="grid max-w-4xl gap-4">
+    {
+      lista.map((p) => (
+        <form method="post" class:list={['grid items-end gap-3 rounded-2xl border bg-white p-5 sm:grid-cols-[1.4fr_1fr_1fr_auto_auto]', p.activo ? 'border-slate-200' : 'border-dashed border-slate-300 opacity-75']}>
+          <input type="hidden" name="id" value={p.id} />
+          <label class="text-sm font-medium text-navy-900">Nombre<input id={`n-${p.id}`} name="nombre" value={p.nombre} required class={campo} /></label>
+          <label class="text-sm font-medium text-navy-900">Precio ($)<input id={`p-${p.id}`} name="precio" inputmode="decimal" value={p.precio} required class={campo} /></label>
+          <label class="text-sm font-medium text-navy-900">Días<input id={`d-${p.id}`} name="dias" type="number" min="1" value={p.dias} required class={campo} /></label>
+          <label class="flex items-center gap-2 pb-2.5 text-sm text-navy-900">
+            <input type="checkbox" name="activo" value="1" checked={!!p.activo} class="size-4 accent-naranja" /> Disponible
+          </label>
+          <button class="rounded-full bg-navy-900 px-4 py-2 text-sm font-semibold text-white">Guardar</button>
+        </form>
+      ))
+    }
+
+    <form method="post" class="grid items-end gap-3 rounded-2xl border border-dashed border-naranja/50 bg-crema/40 p-5 sm:grid-cols-[1.4fr_1fr_1fr_auto]">
+      <label class="text-sm font-medium text-navy-900">Plan nuevo<input id="nuevo-nombre" name="nombre" placeholder="Ej.: Trimestral" required class={campo} /></label>
+      <label class="text-sm font-medium text-navy-900">Precio ($)<input id="nuevo-precio" name="precio" inputmode="decimal" required class={campo} /></label>
+      <label class="text-sm font-medium text-navy-900">Días<input id="nuevo-dias" name="dias" type="number" min="1" placeholder="90" required class={campo} /></label>
+      <input type="hidden" name="activo" value="1" />
+      <button class="rounded-full bg-naranja px-4 py-2 text-sm font-semibold text-white">Agregar plan</button>
+    </form>
+    <p class="text-sm text-gris">Desmarca "Disponible" para ocultar un plan sin borrar su historial.</p>
+  </div>
+</AdminLayout>

@@ -1,0 +1,112 @@
+---
+import AdminLayout from '../../../../layouts/AdminLayout.astro';
+import VpnNav from '../../../../components/admin/VpnNav.astro';
+import Icon from '../../../../components/Icon.astro';
+import { db } from '../../../../lib/db';
+import { ESTADOS, estadoDe, fechaCorta, type Cliente, type Estado } from '../../../../lib/vpn';
+
+export const prerender = false;
+
+const q = (Astro.url.searchParams.get('q') ?? '').trim();
+const filtro = Astro.url.searchParams.get('estado') as Estado | 'todos' | null;
+const todos = (
+  q
+    ? db
+        .prepare(
+          `SELECT c.*, (SELECT COUNT(*) FROM vpn_dispositivos d WHERE d.cliente_id = c.id) n_disp FROM vpn_clientes c
+           WHERE c.nombre LIKE ? OR c.correo LIKE ? OR c.whatsapp LIKE ? ORDER BY c.nombre`,
+        )
+        .all(`%${q}%`, `%${q}%`, `%${q}%`)
+    : db.prepare('SELECT c.*, (SELECT COUNT(*) FROM vpn_dispositivos d WHERE d.cliente_id = c.id) n_disp FROM vpn_clientes c ORDER BY c.nombre').all()
+) as unknown as (Cliente & { n_disp: number })[];
+
+const ahora = Date.now();
+const conEstado = todos.map((c) => ({ ...c, estado: estadoDe(c, ahora) }));
+const coincide = (e: Estado) => !filtro || filtro === 'todos' || filtro === e || (filtro === 'activo' && e === 'por_vencer');
+const lista = conEstado.filter((c) => coincide(c.estado));
+const filtros: { v: string; t: string }[] = [
+  { v: 'todos', t: 'Todos' },
+  { v: 'activo', t: 'Activos' },
+  { v: 'por_vencer', t: 'Por vencer' },
+  { v: 'vencido', t: 'Vencidos' },
+  { v: 'suspendido', t: 'Suspendidos' },
+];
+const actual = filtro ?? 'todos';
+const hace = (ts: number | null) => {
+  if (!ts) return 'Nunca';
+  const m = Math.round((ahora - ts) / 60000);
+  if (m < 60) return `hace ${Math.max(m, 1)} min`;
+  if (m < 1440) return `hace ${Math.round(m / 60)} h`;
+  return fechaCorta(ts);
+};
+---
+
+<AdminLayout titulo="Clientes VPN">
+  <VpnNav />
+
+  <div class="mb-4 flex flex-wrap items-center gap-3">
+    <form class="flex min-w-0 flex-1 items-center rounded-full border border-slate-300 bg-white px-4 focus-within:border-navy-700 sm:max-w-sm">
+      <Icon name="search" size={16} class="text-slate-400" />
+      <input id="buscar" name="q" value={q} placeholder="Buscar por nombre, correo o WhatsApp" class="w-full bg-transparent px-2 py-2 text-sm outline-none" />
+      {filtro && <input type="hidden" name="estado" value={filtro} />}
+    </form>
+    <div class="flex flex-wrap gap-1 text-sm">
+      {
+        filtros.map((f) => (
+          <a
+            href={`/admin/vpn/clientes?estado=${f.v}${q ? `&q=${encodeURIComponent(q)}` : ''}`}
+            class:list={['rounded-full border px-3 py-1', actual === f.v ? 'border-navy-900 bg-navy-900 text-white' : 'border-slate-300 bg-white text-gris']}
+          >
+            {f.t}
+          </a>
+        ))
+      }
+    </div>
+  </div>
+
+  {
+    lista.length === 0 ? (
+      <div class="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center text-gris">
+        <Icon name="user" size={32} class="mx-auto text-slate-400" />
+        <p class="mt-3">{todos.length === 0 ? 'Todavía no tienes clientes VPN.' : 'Ningún cliente coincide con la búsqueda.'}</p>
+        {todos.length === 0 && (
+          <a href="/admin/vpn/clientes/nuevo" class="mt-4 inline-block rounded-full bg-naranja px-4 py-2 text-sm font-semibold text-white">
+            Crear el primero
+          </a>
+        )}
+      </div>
+    ) : (
+      <div class="overflow-x-auto rounded-2xl border border-slate-200 bg-white">
+        <table class="w-full min-w-[720px] text-sm">
+          <thead class="border-b border-slate-200 text-left text-xs tracking-wide text-gris uppercase">
+            <tr>
+              <th class="px-4 py-3 font-semibold">Cliente</th>
+              <th class="px-4 py-3 font-semibold">Plan</th>
+              <th class="px-4 py-3 font-semibold">Vence</th>
+              <th class="px-4 py-3 font-semibold">Estado</th>
+              <th class="px-4 py-3 font-semibold">Dispositivos</th>
+              <th class="px-4 py-3 font-semibold">Último uso de la app</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            {lista.map((c) => (
+              <tr class="hover:bg-slate-50">
+                <td class="px-4 py-3">
+                  <a href={`/admin/vpn/clientes/${c.id}`} class="font-medium text-navy-900 hover:underline">{c.nombre}</a>
+                  <span class="block text-xs text-gris">{c.correo}</span>
+                </td>
+                <td class="px-4 py-3">{c.plan ?? '—'}</td>
+                <td class="px-4 py-3 tabular-nums">{fechaCorta(c.vence_en)}</td>
+                <td class="px-4 py-3">
+                  <span class:list={['rounded-full px-2 py-0.5 text-xs font-semibold', ESTADOS[c.estado].clase]}>{ESTADOS[c.estado].texto}</span>
+                </td>
+                <td class="px-4 py-3 tabular-nums">{c.n_disp} / {c.max_dispositivos}</td>
+                <td class="px-4 py-3 text-gris">{hace(c.ultimo_acceso)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )
+  }
+</AdminLayout>

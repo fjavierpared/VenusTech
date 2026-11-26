@@ -132,6 +132,68 @@ const MIGRACIONES = [
   CREATE INDEX idx_visitas_ultimo ON visitas(ultimo);
   ALTER TABLE mensajes ADD COLUMN visitante TEXT;
   `,
+  // CRM VPN (VenusTech Shield)
+  `
+  CREATE TABLE vpn_planes (
+    id INTEGER PRIMARY KEY,
+    nombre TEXT NOT NULL,
+    dias INTEGER NOT NULL,
+    precio REAL NOT NULL,
+    activo INTEGER NOT NULL DEFAULT 1,
+    orden INTEGER NOT NULL DEFAULT 0
+  );
+  INSERT INTO vpn_planes (nombre, dias, precio, orden) VALUES ('Mensual', 30, 4, 1), ('Anual', 365, 44, 2);
+
+  CREATE TABLE vpn_clientes (
+    id INTEGER PRIMARY KEY,
+    nombre TEXT NOT NULL,
+    correo TEXT NOT NULL UNIQUE COLLATE NOCASE,
+    whatsapp TEXT,
+    notas TEXT,
+    hash TEXT NOT NULL,
+    max_dispositivos INTEGER NOT NULL DEFAULT 2,
+    plan TEXT,
+    vence_en INTEGER,
+    suspendido INTEGER NOT NULL DEFAULT 0,
+    ultimo_acceso INTEGER,
+    creado_en INTEGER NOT NULL
+  );
+  CREATE INDEX idx_vpn_clientes_vence ON vpn_clientes(vence_en);
+
+  CREATE TABLE vpn_pagos (
+    id INTEGER PRIMARY KEY,
+    cliente_id INTEGER NOT NULL REFERENCES vpn_clientes(id) ON DELETE CASCADE,
+    plan TEXT NOT NULL,
+    dias INTEGER NOT NULL,
+    monto REAL NOT NULL,
+    metodo TEXT NOT NULL,
+    referencia TEXT,
+    notas TEXT,
+    desde INTEGER NOT NULL,
+    hasta INTEGER NOT NULL,
+    creado_en INTEGER NOT NULL
+  );
+  CREATE INDEX idx_vpn_pagos_cliente ON vpn_pagos(cliente_id);
+  CREATE INDEX idx_vpn_pagos_fecha ON vpn_pagos(creado_en);
+
+  CREATE TABLE vpn_dispositivos (
+    id INTEGER PRIMARY KEY,
+    cliente_id INTEGER NOT NULL REFERENCES vpn_clientes(id) ON DELETE CASCADE,
+    device_id TEXT NOT NULL,
+    nombre TEXT NOT NULL,
+    wg_id INTEGER NOT NULL,
+    creado_en INTEGER NOT NULL,
+    ultimo_acceso INTEGER,
+    UNIQUE (cliente_id, device_id)
+  );
+
+  CREATE TABLE vpn_sesiones (
+    token_hash TEXT PRIMARY KEY,
+    cliente_id INTEGER NOT NULL REFERENCES vpn_clientes(id) ON DELETE CASCADE,
+    dispositivo_id INTEGER NOT NULL REFERENCES vpn_dispositivos(id) ON DELETE CASCADE,
+    creado_en INTEGER NOT NULL
+  );
+  `,
 ];
 
 function abrir() {

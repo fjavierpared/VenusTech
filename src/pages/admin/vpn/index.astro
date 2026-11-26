@@ -1,0 +1,101 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import VpnNav from '../../../components/admin/VpnNav.astro';
+import Icon from '../../../components/Icon.astro';
+import { db } from '../../../lib/db';
+import { resumen, ESTADOS, estadoDe, fechaCorta, dinero, enlaceWa, mensajeRecordatorio, type Pago } from '../../../lib/vpn';
+
+export const prerender = false;
+
+const r = resumen();
+const ultimosPagos = db
+  .prepare('SELECT p.*, c.nombre FROM vpn_pagos p JOIN vpn_clientes c ON c.id = p.cliente_id ORDER BY p.creado_en DESC LIMIT 8')
+  .all() as unknown as (Pago & { nombre: string })[];
+const mes = new Intl.DateTimeFormat('es-VE', { month: 'long' }).format(Date.now());
+const dias = (ts: number | null) => (ts ? Math.ceil((ts - Date.now()) / 86_400_000) : 0);
+
+const tarjetas = [
+  { titulo: 'Activos', valor: r.conteo.activo + r.conteo.por_vencer, nota: `de ${r.total} clientes`, href: '/admin/vpn/clientes?estado=activo' },
+  { titulo: 'Por vencer', valor: r.conteo.por_vencer, nota: 'en los próximos 7 días', href: '/admin/vpn/clientes?estado=por_vencer' },
+  { titulo: 'Vencidos', valor: r.conteo.vencido, nota: 'sin renovar', href: '/admin/vpn/clientes?estado=vencido' },
+  { titulo: `Cobrado en ${mes}`, valor: dinero(r.ingresosMes), nota: 'pagos registrados', href: '/admin/vpn/pagos' },
+];
+---
+
+<AdminLayout titulo="CRM VPN">
+  <VpnNav />
+
+  <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    {
+      tarjetas.map((t) => (
+        <a href={t.href} class="rounded-2xl border border-slate-200 bg-white p-5 transition hover:border-navy-300">
+          <p class="text-sm text-gris">{t.titulo}</p>
+          <p class="mt-1 font-display text-3xl font-bold text-navy-900 tabular-nums">{t.valor}</p>
+          <p class="mt-1 text-xs text-gris">{t.nota}</p>
+        </a>
+      ))
+    }
+  </div>
+
+  <div class="mt-6 grid gap-6 xl:grid-cols-[1.3fr_1fr]">
+    <section class="rounded-2xl border border-slate-200 bg-white p-5">
+      <h2 class="font-semibold text-navy-900">Vencen pronto o ya vencieron</h2>
+      <p class="text-sm text-gris">Envía el recordatorio con un toque. Al recibir el pago, regístralo en su ficha.</p>
+      {
+        r.porVencer.length === 0 ? (
+          <p class="mt-6 rounded-xl bg-slate-50 p-6 text-center text-sm text-gris">Nadie vence en los próximos 7 días. 👌</p>
+        ) : (
+          <ul class="mt-4 divide-y divide-slate-100">
+            {r.porVencer.map((c) => {
+              const e = ESTADOS[estadoDe(c)];
+              const d = dias(c.vence_en);
+              const wa = enlaceWa(c.whatsapp, mensajeRecordatorio(c));
+              return (
+                <li class="flex flex-wrap items-center gap-3 py-3">
+                  <a href={`/admin/vpn/clientes/${c.id}`} class="min-w-0 flex-1">
+                    <span class="block truncate font-medium text-navy-900">{c.nombre}</span>
+                    <span class="block truncate text-xs text-gris">
+                      {c.plan} · {d > 0 ? `vence en ${d} ${d === 1 ? 'día' : 'días'}` : `venció el ${fechaCorta(c.vence_en)}`}
+                    </span>
+                  </a>
+                  <span class:list={['rounded-full px-2 py-0.5 text-xs font-semibold', e.clase]}>{e.texto}</span>
+                  {wa && (
+                    <a href={wa} target="_blank" rel="noopener" class="inline-flex items-center gap-1 rounded-full bg-[#25D366] px-3 py-1.5 text-xs font-semibold text-[#073b1d]">
+                      <Icon name="whatsapp" size={14} /> Recordar
+                    </a>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )
+      }
+    </section>
+
+    <section class="rounded-2xl border border-slate-200 bg-white p-5">
+      <div class="flex items-center justify-between">
+        <h2 class="font-semibold text-navy-900">Últimos pagos</h2>
+        <a href="/admin/vpn/pagos" class="text-sm text-navy-700 underline">Ver todos</a>
+      </div>
+      {
+        ultimosPagos.length === 0 ? (
+          <p class="mt-6 rounded-xl bg-slate-50 p-6 text-center text-sm text-gris">
+            Aún no hay pagos. Crea tu primer cliente con el botón <strong>+ Nuevo cliente</strong>.
+          </p>
+        ) : (
+          <ul class="mt-4 divide-y divide-slate-100 text-sm">
+            {ultimosPagos.map((p) => (
+              <li class="flex items-center justify-between gap-3 py-2.5">
+                <a href={`/admin/vpn/clientes/${p.cliente_id}`} class="min-w-0">
+                  <span class="block truncate font-medium text-navy-900">{p.nombre}</span>
+                  <span class="block text-xs text-gris">{p.plan} · {p.metodo} · {fechaCorta(p.creado_en)}</span>
+                </a>
+                <span class="font-semibold text-navy-900 tabular-nums">{dinero(p.monto)}</span>
+              </li>
+            ))}
+          </ul>
+        )
+      }
+    </section>
+  </div>
+</AdminLayout>

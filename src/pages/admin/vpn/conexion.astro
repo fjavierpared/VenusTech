@@ -2,6 +2,7 @@
 import AdminLayout from '../../../layouts/AdminLayout.astro';
 import VpnNav from '../../../components/admin/VpnNav.astro';
 import { probarConexion, guardarConexion, origenConexion, usuarioConexion } from '../../../lib/wgeasy';
+import { soporte, guardarSoporte, soporteTexto } from '../../../lib/vpn';
 
 export const prerender = false;
 
@@ -12,7 +13,11 @@ if (Astro.request.method === 'POST') {
   try {
     if (f.get('accion') === 'guardar') {
       await guardarConexion(String(f.get('usuario') ?? ''), String(f.get('clave') ?? ''));
-      aviso = 'Contraseña verificada y guardada cifrada. Ya puedes crear clientes y entrar desde la app.';
+      aviso = 'Contraseña verificada y guardada cifrada. Ya puedes crear usuarios y entrar desde la app.';
+    } else if (f.get('accion') === 'soporte') {
+      const tipo = String(f.get('tipo') ?? '');
+      const s = guardarSoporte(tipo, String(f.get(tipo === 'correo' ? 'correo' : 'whatsapp') ?? ''));
+      aviso = `Listo: el botón "Soporte" de las apps ahora abre ${s.tipo === 'correo' ? 'el correo' : 'WhatsApp'} (${soporteTexto(s)}).`;
     }
   } catch (e) {
     error = e instanceof Error ? e.message : String(e);
@@ -20,16 +25,39 @@ if (Astro.request.method === 'POST') {
 }
 const estado = await probarConexion();
 const origen = origenConexion();
+const sop = soporte();
 const campo = 'mt-1.5 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-navy-700';
 ---
 
-<AdminLayout titulo="Conexión con el servidor VPN">
+<AdminLayout titulo="VPN privada · Ajustes">
   <VpnNav />
 
   {error && <p class="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</p>}
   {aviso && <p class="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">{aviso}</p>}
 
   <div class="grid max-w-3xl gap-6">
+    <section class="rounded-2xl border border-slate-200 bg-white p-5">
+      <h2 class="font-semibold text-navy-900">Botón "Soporte" de las apps</h2>
+      <p class="mt-1 text-sm text-gris">
+        Ahora abre <strong class="text-navy-900">{sop.tipo === 'correo' ? 'el correo' : 'WhatsApp'}: {soporteTexto(sop)}</strong>.
+        Si eliges correo, se abre Gmail para escribirte; si eliges WhatsApp, se abre el chat. Las apps toman el cambio al abrirlas.
+      </p>
+      <form method="post" class="mt-4 grid gap-3">
+        <input type="hidden" name="accion" value="soporte" />
+        <label class="flex flex-wrap items-center gap-3 rounded-xl border border-slate-300 p-3 text-sm has-[:checked]:border-naranja has-[:checked]:bg-crema">
+          <input type="radio" name="tipo" value="whatsapp" checked={sop.tipo === 'whatsapp'} class="accent-naranja" />
+          <span class="w-20 font-semibold text-navy-900">WhatsApp</span>
+          <input id="sop-whatsapp" name="whatsapp" inputmode="tel" value={sop.tipo === 'whatsapp' ? `+${sop.valor}` : ''} placeholder="+58 414 1234567" aria-label="Número de WhatsApp" class="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5" />
+        </label>
+        <label class="flex flex-wrap items-center gap-3 rounded-xl border border-slate-300 p-3 text-sm has-[:checked]:border-naranja has-[:checked]:bg-crema">
+          <input type="radio" name="tipo" value="correo" checked={sop.tipo === 'correo'} class="accent-naranja" />
+          <span class="w-20 font-semibold text-navy-900">Correo</span>
+          <input id="sop-correo" name="correo" type="email" value={sop.tipo === 'correo' ? sop.valor : ''} placeholder="tucorreo@gmail.com" aria-label="Correo de soporte" class="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5" />
+        </label>
+        <div><button class="rounded-full bg-naranja px-5 py-2.5 text-sm font-semibold text-white hover:bg-naranja-600">Guardar</button></div>
+      </form>
+    </section>
+
     <section class:list={['rounded-2xl border p-5', estado.ok ? 'border-emerald-200 bg-emerald-50' : 'border-red-200 bg-red-50']}>
       <p class="text-lg font-semibold text-navy-900">{estado.ok ? '✅ Conectado' : '❌ Sin conexión'}</p>
       <p class="mt-1 text-sm text-tinta">

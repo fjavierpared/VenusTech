@@ -5,7 +5,7 @@ const path = Astro.url.pathname.replace(/\/$/, '');
 const tabs = [
   { href: '/admin/vpn/clientes', label: 'Usuarios' },
   { href: '/admin/vpn/descargas', label: 'Descargas' },
-  { href: '/admin/vpn/conexion', label: 'Conexión' },
+  { href: '/admin/vpn/conexion', label: 'Ajustes' },
 ];
 const sinConexion = !conexionConfigurada() && path !== '/admin/vpn/conexion';
 const activo = (href: string) => path === href || (path.startsWith(href) && !path.endsWith('/nuevo'));

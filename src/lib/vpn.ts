@@ -290,6 +290,44 @@ export async function borrarCliente(clienteId: number) {
   db.prepare('DELETE FROM vpn_clientes WHERE id = ?').run(clienteId);
 }
 
+// ---------- Botón "Soporte" de las apps ----------
+// Se configura en VPN privada → Ajustes. Las apps lo leen de /api/vpn/soporte (y de /cuenta).
+
+export type Soporte = { tipo: 'whatsapp' | 'correo'; valor: string };
+
+export function soporte(): Soporte {
+  const fila = db.prepare("SELECT valor FROM ajustes WHERE clave = 'vpn_soporte'").get() as { valor: string } | undefined;
+  try {
+    const s = fila ? (JSON.parse(fila.valor) as Soporte) : null;
+    if (s && (s.tipo === 'whatsapp' || s.tipo === 'correo') && s.valor) return s;
+  } catch {
+    /* valor dañado: se usa el de respaldo */
+  }
+  return { tipo: 'whatsapp', valor: '584247126299' };
+}
+
+export function guardarSoporte(tipo: string, valor: string): Soporte {
+  let s: Soporte;
+  if (tipo === 'correo') {
+    const c = valor.trim().toLowerCase();
+    if (!correoValido(c)) throw new Error('El correo de soporte no es válido.');
+    s = { tipo: 'correo', valor: c };
+  } else if (tipo === 'whatsapp') {
+    const n = waNumero(valor);
+    if (!n || n.length > 15) throw new Error('Escribe un número de WhatsApp válido, por ejemplo 0414-1234567 o +58 414 1234567.');
+    s = { tipo: 'whatsapp', valor: n };
+  } else {
+    throw new Error('Elige WhatsApp o correo.');
+  }
+  db.prepare("INSERT INTO ajustes (clave, valor) VALUES ('vpn_soporte', ?) ON CONFLICT(clave) DO UPDATE SET valor = excluded.valor").run(
+    JSON.stringify(s),
+  );
+  return s;
+}
+
+/** Cómo se ve el contacto de soporte (para el panel). */
+export const soporteTexto = (s: Soporte) => (s.tipo === 'correo' ? s.valor : `+${s.valor}`);
+
 // ---------- Mensajes de WhatsApp ----------
 
 export function mensajeBienvenida(c: Cliente, clave: string) {
@@ -400,7 +438,7 @@ export async function cuentaApp(token: string | null) {
   db.prepare('UPDATE vpn_dispositivos SET ultimo_acceso = ? WHERE id = ?').run(ahora, s.disp_id);
   const activo = tieneAcceso(s);
   const estado = estadoDe(s, ahora);
-  const { SITE } = await import('../data/site');
+  const sop = soporte();
   return {
     nombre: s.nombre,
     correo: s.correo,
@@ -411,7 +449,9 @@ export async function cuentaApp(token: string | null) {
     servidor: SERVIDOR_ETIQUETA,
     dispositivo: s.disp_nombre,
     dispositivos: { usados: dispositivos(s.id).length, max: s.max_dispositivos },
-    soporteWhatsapp: SITE.whatsapp,
+    soporte: sop,
+    // Compatibilidad con apps v0.2 (solo sabían abrir WhatsApp)
+    soporteWhatsapp: sop.tipo === 'whatsapp' ? sop.valor : null,
     // Sin plan vigente no se entrega la llave del túnel
     config: activo ? await wg.configuracion(s.wg_id) : null,
   };

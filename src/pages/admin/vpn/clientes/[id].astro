@@ -4,10 +4,9 @@ import VpnNav from '../../../../components/admin/VpnNav.astro';
 import VpnCredenciales from '../../../../components/admin/VpnCredenciales.astro';
 import Icon from '../../../../components/Icon.astro';
 import {
-  cliente, dispositivos, pagosDe, planes, METODOS, ESTADOS, estadoDe, fechaCorta, dinero, enlaceWa,
-  registrarPago, anularPago, editarCliente, suspender, restablecerClave, borrarDispositivo, borrarCliente, sincronizar,
-  mensajeClaveNueva, mensajePagoRecibido, mensajeRecordatorio, cambiarAccesoVps, esIpVps, ipsVpsLibres, VPS_RANGO_TEXTO,
-  type DatosPago,
+  cliente, dispositivos, ESTADOS, estadoDe, fechaCorta, enlaceWa, fijarAcceso,
+  editarCliente, suspender, restablecerClave, borrarDispositivo, borrarCliente, sincronizar,
+  mensajeClaveNueva, cambiarAccesoVps, esIpVps, ipsVpsLibres, VPS_RANGO_TEXTO,
 } from '../../../../lib/vpn';
 
 export const prerender = false;
@@ -19,28 +18,19 @@ const campo = 'mt-1.5 w-full rounded-xl border border-slate-300 bg-white px-3 py
 let error = '';
 let aviso = '';
 let claveNueva: string | null = null;
-let pagoOk = false;
 
 if (Astro.request.method === 'POST') {
   const f = await Astro.request.formData();
   const g = (k: string) => String(f.get(k) ?? '');
   try {
     switch (g('accion')) {
-      case 'pago': {
-        const plan: DatosPago['plan'] = g('plan') === 'cortesia' ? 'cortesia' : Number(g('plan'));
-        await registrarPago(id, {
-          plan,
-          diasCortesia: Number(g('dias')),
-          monto: g('monto') ? Number(g('monto').replace(',', '.')) : undefined,
-          metodo: plan === 'cortesia' ? 'Cortesía' : g('metodo'),
-          referencia: g('referencia'),
-        });
-        pagoOk = true;
+      case 'acceso_siempre':
+        await fijarAcceso(id, null);
+        aviso = 'Listo: su acceso ya no vence.';
         break;
-      }
-      case 'anular_pago':
-        await anularPago(Number(g('pago')));
-        aviso = 'Pago anulado y vencimiento recalculado.';
+      case 'acceso_dias':
+        await fijarAcceso(id, Number(g('dias')));
+        aviso = `Listo: su acceso vence el ${fechaCorta(cliente(id)!.vence_en)}.`;
         break;
       case 'editar':
         editarCliente(id, { nombre: g('nombre'), correo: g('correo'), whatsapp: g('whatsapp'), notas: g('notas'), maxDispositivos: Number(g('dispositivos')) });
@@ -51,11 +41,11 @@ if (Astro.request.method === 'POST') {
         break;
       case 'suspender':
         await suspender(id, true);
-        aviso = 'Cliente suspendido: su VPN se desconectó.';
+        aviso = 'Usuario suspendido: su VPN se desconectó.';
         break;
       case 'reactivar':
         await suspender(id, false);
-        aviso = 'Cliente reactivado.';
+        aviso = 'Usuario reactivado.';
         break;
       case 'borrar_disp':
         await borrarDispositivo(Number(g('disp')));
@@ -63,11 +53,11 @@ if (Astro.request.method === 'POST') {
         break;
       case 'vps_on':
         await cambiarAccesoVps(id, true);
-        aviso = 'Acceso al VPS activado. Sus dispositivos lo tendrán en cuanto la app se actualice (al abrirla).';
+        aviso = 'Acceso a todo el VPS activado. Sus dispositivos lo tendrán en cuanto la app se actualice (al abrirla).';
         break;
       case 'vps_off':
         await cambiarAccesoVps(id, false);
-        aviso = 'Acceso al VPS quitado. Sus dispositivos lo pierden en cuanto la app se actualice; el firewall ya no los deja pasar.';
+        aviso = 'Acceso al VPS quitado. Sus dispositivos lo pierden en cuanto la app se actualice.';
         break;
       case 'sincronizar':
         await sincronizar(id);
@@ -85,12 +75,7 @@ if (Astro.request.method === 'POST') {
 const c = cliente(id)!;
 const estado = estadoDe(c);
 const disp = dispositivos(id);
-const pagos = pagosDe(id);
 const libresVps = await ipsVpsLibres();
-const lista = planes();
-const total = pagos.reduce((s, p) => s + p.monto, 0);
-const waPago = pagoOk ? enlaceWa(c.whatsapp, mensajePagoRecibido(c)) : null;
-const waRecordar = enlaceWa(c.whatsapp, mensajeRecordatorio(c));
 const fechaHora = (ts: number | null) =>
   ts ? new Intl.DateTimeFormat('es-VE', { dateStyle: 'medium', timeStyle: 'short' }).format(ts) : 'Nunca';
 ---
@@ -100,18 +85,6 @@ const fechaHora = (ts: number | null) =>
 
   {error && <p class="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</p>}
   {aviso && <p class="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">{aviso}</p>}
-  {
-    pagoOk && (
-      <div class="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
-        <span>✅ Pago registrado. Activo hasta el <strong>{fechaCorta(c.vence_en)}</strong>.</span>
-        {waPago && (
-          <a href={waPago} target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 rounded-full bg-[#25D366] px-3 py-1.5 font-semibold text-[#073b1d]">
-            <Icon name="whatsapp" size={14} /> Avisarle por WhatsApp
-          </a>
-        )}
-      </div>
-    )
-  }
   {
     claveNueva && (
       <VpnCredenciales
@@ -130,25 +103,17 @@ const fechaHora = (ts: number | null) =>
       <div class="min-w-0">
         <div class="flex flex-wrap items-center gap-2">
           <span class:list={['rounded-full px-2.5 py-0.5 text-xs font-semibold', ESTADOS[estado].clase]}>{ESTADOS[estado].texto}</span>
-          <span class="text-sm text-gris">Cliente desde {fechaCorta(c.creado_en)}</span>
+          <span class="text-sm text-gris">Usuario desde {fechaCorta(c.creado_en)}</span>
         </div>
         <p class="mt-2 text-sm break-all text-gris">{c.correo}{c.whatsapp && <> · {c.whatsapp}</>}</p>
         {c.notas && <p class="mt-2 text-sm whitespace-pre-line text-tinta">{c.notas}</p>}
       </div>
       <div class="text-right">
-        <p class="text-sm text-gris">Plan {c.plan ?? '—'}</p>
-        <p class="font-display text-2xl font-bold text-navy-900">{c.vence_en ? `Vence ${fechaCorta(c.vence_en)}` : 'Sin plan'}</p>
-        <p class="text-xs text-gris">Total pagado: {dinero(total)}</p>
+        <p class="text-sm text-gris">Acceso</p>
+        <p class="font-display text-2xl font-bold text-navy-900">{c.vence_en ? `Hasta ${fechaCorta(c.vence_en)}` : 'Sin vencimiento'}</p>
       </div>
     </div>
     <div class="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-4">
-      {
-        waRecordar && (
-          <a href={waRecordar} target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 rounded-full bg-[#25D366] px-3 py-1.5 text-sm font-semibold text-[#073b1d]">
-            <Icon name="whatsapp" size={14} /> Recordar pago
-          </a>
-        )
-      }
       <form method="post">
         <button name="accion" value="clave" class="rounded-full border border-slate-300 px-3 py-1.5 text-sm" onclick="return confirm('¿Generar una contraseña nueva? La actual dejará de servir y se cerrará su sesión en la app.')">
           Generar contraseña nueva
@@ -169,55 +134,35 @@ const fechaHora = (ts: number | null) =>
   </section>
 
   <div class="mt-6 grid gap-6 xl:grid-cols-2">
-    <!-- Registrar pago -->
+    <!-- Duración del acceso -->
     <section class="rounded-2xl border border-slate-200 bg-white p-5">
-      <h2 class="font-semibold text-navy-900">Registrar pago o renovar</h2>
-      <p class="text-sm text-gris">Se suma al tiempo que le quede. Si ya venció, cuenta desde hoy.</p>
-      <form method="post" class="mt-4 grid gap-4">
-        <input type="hidden" name="accion" value="pago" />
-        <div class="grid gap-2 sm:grid-cols-3">
-          {
-            lista.map((p, i) => (
-              <label class="flex cursor-pointer items-center gap-2 rounded-xl border border-slate-300 p-2.5 text-sm has-[:checked]:border-naranja has-[:checked]:bg-crema">
-                <input type="radio" name="plan" value={p.id} checked={i === 0} class="accent-naranja" />
-                <span><strong class="text-navy-900">{p.nombre}</strong> {dinero(p.precio)}</span>
-              </label>
-            ))
-          }
-          <label class="flex cursor-pointer items-center gap-2 rounded-xl border border-slate-300 p-2.5 text-sm has-[:checked]:border-naranja has-[:checked]:bg-crema">
-            <input type="radio" name="plan" value="cortesia" class="accent-naranja" />
-            <span><strong class="text-navy-900">Gratis</strong> días</span>
-          </label>
-        </div>
-        <div class="grid gap-3 sm:grid-cols-3">
-          <label class="text-sm font-medium text-navy-900" data-solo="pago">
-            Método
-            <select id="pago-metodo" name="metodo" class={campo}>{METODOS.filter((m) => m !== 'Cortesía').map((m) => <option>{m}</option>)}</select>
-          </label>
-          <label class="text-sm font-medium text-navy-900" data-solo="pago">
-            Monto ($)
-            <input id="pago-monto" name="monto" inputmode="decimal" placeholder="Precio del plan" class={campo} />
-          </label>
-          <label class="text-sm font-medium text-navy-900" data-solo="pago">
-            Referencia
-            <input id="pago-ref" name="referencia" class={campo} />
-          </label>
-          <label class="text-sm font-medium text-navy-900" data-solo="cortesia" hidden>
-            Días gratis
-            <input id="pago-dias" name="dias" type="number" min="1" max="3650" value="7" class={campo} />
-          </label>
-        </div>
-        <button class="justify-self-start rounded-full bg-naranja px-5 py-2.5 text-sm font-semibold text-white hover:bg-naranja-600">Registrar</button>
-      </form>
+      <h2 class="font-semibold text-navy-900">Duración del acceso</h2>
+      <p class="text-sm text-gris">
+        Ahora: <strong class="text-navy-900">{c.vence_en ? `vence el ${fechaCorta(c.vence_en)}` : 'sin vencimiento'}</strong>.
+        Para cortarle el acceso de inmediato usa "Suspender".
+      </p>
+      <div class="mt-4 grid gap-3">
+        <form method="post">
+          <button name="accion" value="acceso_siempre" disabled={c.vence_en === null} class="rounded-full border border-slate-300 px-4 py-2 text-sm disabled:opacity-50">
+            Dejar sin vencimiento
+          </button>
+        </form>
+        <form method="post" class="flex flex-wrap items-center gap-2 text-sm">
+          <span>Que venza en</span>
+          <input id="acc-dias" name="dias" type="number" min="1" max="3650" value="30" required aria-label="Días" class="w-20 rounded-lg border border-slate-300 px-2 py-1.5" />
+          <span>días desde hoy</span>
+          <button name="accion" value="acceso_dias" class="rounded-full bg-navy-900 px-4 py-2 font-semibold text-white">Aplicar</button>
+        </form>
+      </div>
     </section>
 
     <!-- Dispositivos -->
     <section class="rounded-2xl border border-slate-200 bg-white p-5">
       <h2 class="font-semibold text-navy-900">Dispositivos ({disp.length} de {c.max_dispositivos})</h2>
-      <p class="text-sm text-gris">Se agregan solos cuando entra a la app desde un teléfono nuevo.</p>
+      <p class="text-sm text-gris">Se agregan solos cuando entra a la app desde un teléfono o PC nuevo.</p>
       <form method="post" class:list={['mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3 text-sm', c.acceso_vps ? 'border-amber-300 bg-amber-50' : 'border-slate-200 bg-slate-50']}>
         <span class="min-w-0">
-          <span class="block font-semibold text-navy-900">Acceso al VPS (SSH): {c.acceso_vps ? 'Sí' : 'No'}</span>
+          <span class="block font-semibold text-navy-900">Acceso a todo el VPS: {c.acceso_vps ? 'Sí' : 'No'}</span>
           <span class="block text-xs text-gris">
             IPs del grupo {VPS_RANGO_TEXTO}{libresVps !== null && <> · quedan {libresVps} libres</>}
           </span>
@@ -226,7 +171,7 @@ const fechaHora = (ts: number | null) =>
           c.acceso_vps ? (
             <button name="accion" value="vps_off" class="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold">Quitar acceso</button>
           ) : (
-            <button name="accion" value="vps_on" class="rounded-full bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white" onclick="return confirm('¿Dar acceso por SSH al VPS a los dispositivos de este cliente? Solo para personal de confianza.')">
+            <button name="accion" value="vps_on" class="rounded-full bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white" onclick="return confirm('¿Dar acceso a TODO el VPS (SSH, paneles, redes internas) a los dispositivos de este usuario? Solo para personal de confianza.')">
               Dar acceso
             </button>
           )
@@ -243,7 +188,7 @@ const fechaHora = (ts: number | null) =>
                   <span class="block truncate font-medium text-navy-900">{d.nombre}</span>
                   <span class="block text-xs text-gris">
                     IP <span class="font-mono">{d.ip ?? '—'}</span>
-                    {esIpVps(d.ip) && <span class="ml-1 rounded bg-amber-100 px-1.5 py-0.5 font-semibold text-amber-800">SSH al VPS</span>}
+                    {esIpVps(d.ip) && <span class="ml-1 rounded bg-amber-100 px-1.5 py-0.5 font-semibold text-amber-800">Acceso al VPS</span>}
                     · desde {fechaCorta(d.creado_en)} · último uso {fechaHora(d.ultimo_acceso)}
                   </span>
                 </span>
@@ -261,45 +206,9 @@ const fechaHora = (ts: number | null) =>
     </section>
   </div>
 
-  <!-- Historial de pagos -->
-  <section class="mt-6 rounded-2xl border border-slate-200 bg-white p-5">
-    <h2 class="font-semibold text-navy-900">Historial de pagos</h2>
-    {
-      pagos.length === 0 ? (
-        <p class="mt-4 text-sm text-gris">Sin pagos registrados.</p>
-      ) : (
-        <div class="mt-4 overflow-x-auto">
-          <table class="w-full min-w-[560px] text-sm">
-            <thead class="text-left text-xs tracking-wide text-gris uppercase">
-              <tr><th class="py-2">Fecha</th><th>Plan</th><th>Método</th><th>Referencia</th><th>Cubre</th><th class="text-right">Monto</th><th></th></tr>
-            </thead>
-            <tbody class="divide-y divide-slate-100">
-              {pagos.map((p) => (
-                <tr>
-                  <td class="py-2.5">{fechaCorta(p.creado_en)}</td>
-                  <td>{p.plan}</td>
-                  <td>{p.metodo}</td>
-                  <td class="text-gris">{p.referencia ?? '—'}</td>
-                  <td class="text-gris">{fechaCorta(p.desde)} → {fechaCorta(p.hasta)}</td>
-                  <td class="text-right font-semibold tabular-nums">{dinero(p.monto)}</td>
-                  <td class="text-right">
-                    <form method="post">
-                      <input type="hidden" name="pago" value={p.id} />
-                      <button name="accion" value="anular_pago" class="text-xs text-red-700 underline" onclick="return confirm('¿Anular este pago? Se le restan esos días.')">Anular</button>
-                    </form>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )
-    }
-  </section>
-
   <!-- Editar datos -->
   <details class="mt-6 rounded-2xl border border-slate-200 bg-white p-5">
-    <summary class="cursor-pointer font-semibold text-navy-900">Editar datos del cliente</summary>
+    <summary class="cursor-pointer font-semibold text-navy-900">Editar datos del usuario</summary>
     <form method="post" class="mt-4 grid gap-4 sm:grid-cols-2">
       <label class="text-sm font-medium text-navy-900">Nombre<input id="e-nombre" name="nombre" value={c.nombre} required class={campo} /></label>
       <label class="text-sm font-medium text-navy-900">Correo (usuario)<input id="e-correo" name="correo" type="email" value={c.correo} required class={campo} /></label>
@@ -310,22 +219,11 @@ const fechaHora = (ts: number | null) =>
         <button name="accion" value="editar" class="rounded-full bg-navy-900 px-5 py-2.5 text-sm font-semibold text-white">Guardar</button>
         <span class="flex gap-2">
           <button name="accion" value="sincronizar" formnovalidate class="rounded-full border border-slate-300 px-3 py-1.5 text-xs">Reaplicar en servidor</button>
-          <button name="accion" value="borrar" formnovalidate class="rounded-full border border-red-200 px-3 py-1.5 text-xs text-red-700" onclick="return confirm('¿Borrar este cliente con todos sus pagos y dispositivos? No se puede deshacer.')">
-            Borrar cliente
+          <button name="accion" value="borrar" formnovalidate class="rounded-full border border-red-200 px-3 py-1.5 text-xs text-red-700" onclick="return confirm('¿Borrar este usuario y sus dispositivos? No se puede deshacer.')">
+            Borrar usuario
           </button>
         </span>
       </div>
     </form>
   </details>
 </AdminLayout>
-
-<script>
-  const aplicar = () => {
-    const cortesia = document.querySelector<HTMLInputElement>('input[name="plan"]:checked')?.value === 'cortesia';
-    document.querySelectorAll<HTMLElement>('[data-solo]').forEach((el) => {
-      el.hidden = (el.dataset.solo === 'cortesia') !== cortesia;
-    });
-  };
-  document.querySelectorAll('input[name="plan"]').forEach((r) => r.addEventListener('change', aplicar));
-  aplicar();
-</script>

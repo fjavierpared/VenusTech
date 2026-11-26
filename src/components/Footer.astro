@@ -1,7 +1,7 @@
 ---
 import Logo from './Logo.astro';
 import Icon from './Icon.astro';
-import { SITE, SHIELD, NAV, instagramUrl, waLink } from '../data/site';
+import { SITE, NAV, instagramUrl, waLink } from '../data/site';
 import { SERVICIOS } from '../data/servicios';
 
 const year = new Date().getFullYear();
@@ -42,7 +42,6 @@ const year = new Date().getFullYear();
           ))
         }
         <li><a href="/equipos" class="hover:text-ambar">Venta de equipos</a></li>
-        <li><a href={SHIELD.url} target="_blank" rel="noopener" class="hover:text-ambar">{SHIELD.nombre}</a></li>
       </ul>
     </div>
 

@@ -8,7 +8,7 @@ import SectionHeader from '../components/SectionHeader.astro';
 import Faq from '../components/Faq.astro';
 import CtaFinal from '../components/CtaFinal.astro';
 import foto from '../assets/fotos/francisco.jpg';
-import { SITE, SHIELD, TECNOLOGIAS, waLink } from '../data/site';
+import { SITE, TECNOLOGIAS, waLink } from '../data/site';
 import { SERVICIOS } from '../data/servicios';
 import { faqSchema } from '../lib/schema';
 
@@ -164,17 +164,6 @@ const faqs = [
                 </span>
               </a>
             </li>
-            <li>
-              <a href={SHIELD.url} target="_blank" rel="noopener" class="group flex items-start gap-4 rounded-2xl p-2 transition hover:bg-white/5">
-                <span class="flex size-11 shrink-0 items-center justify-center rounded-xl bg-white/10 text-ambar">
-                  <Icon name="shield-check" size={22} strokeWidth={2} />
-                </span>
-                <span>
-                  <span class="block font-display font-semibold text-white group-hover:text-ambar">{SHIELD.nombre}</span>
-                  <span class="mt-0.5 block text-sm text-white/65">{SHIELD.resumen}</span>
-                </span>
-              </a>
-            </li>
           </ul>
         </div>
         <p
@@ -255,7 +244,7 @@ const faqs = [
         </ul>
       </article>
 
-      <div class="mt-5 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+      <div class="mt-5 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
         {
           otrosServicios.map((s) => (
             <article class="reveal flex flex-col rounded-3xl border border-navy-700/10 bg-white p-7 shadow-sm">
@@ -281,16 +270,6 @@ const faqs = [
           </p>
           <a href="/equipos" class="mt-6 inline-flex items-center gap-2 font-semibold text-navy-700 hover:text-naranja">
             Ver equipos <Icon name="arrow-right" size={18} />
-          </a>
-        </article>
-        <article class="reveal flex flex-col rounded-3xl border border-navy-700/10 bg-white p-7 shadow-sm">
-          <span class="flex size-12 items-center justify-center rounded-2xl bg-navy-900 text-ambar">
-            <Icon name="shield-check" size={24} strokeWidth={2} />
-          </span>
-          <h3 class="mt-5 text-xl font-bold text-navy-900">{SHIELD.nombre}</h3>
-          <p class="mt-2 flex-1 leading-relaxed text-gris">{SHIELD.resumen}</p>
-          <a href={SHIELD.url} target="_blank" rel="noopener" class="mt-6 inline-flex items-center gap-2 font-semibold text-navy-700 hover:text-naranja">
-            Conocer {SHIELD.nombre} <Icon name="arrow-right" size={18} />
           </a>
         </article>
       </div>

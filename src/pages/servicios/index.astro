@@ -4,7 +4,7 @@ import PageHero from '../../components/PageHero.astro';
 import Icon from '../../components/Icon.astro';
 import CtaFinal from '../../components/CtaFinal.astro';
 import { SERVICIOS } from '../../data/servicios';
-import { SITE, SHIELD } from '../../data/site';
+import { SITE } from '../../data/site';
 
 const migas = [{ name: 'Servicios', path: '/servicios' }];
 ---
@@ -61,16 +61,6 @@ const migas = [{ name: 'Servicios', path: '/servicios' }];
           <p class="mt-2 text-white/75">PC, laptops, discos, RAM, UPS, routers, impresoras y cámaras, con asesoría para elegir bien.</p>
         </div>
         <a href="/equipos" class="btn-primary">Ver equipos</a>
-      </article>
-      <article class="reveal flex flex-col items-start gap-6 rounded-[2rem] bg-navy-900 p-7 text-white sm:flex-row sm:items-center sm:p-10">
-        <span class="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-ambar">
-          <Icon name="shield-check" size={28} strokeWidth={2} />
-        </span>
-        <div class="flex-1">
-          <h2 class="text-2xl font-bold">{SHIELD.nombre}</h2>
-          <p class="mt-2 text-white/75">{SHIELD.resumen}</p>
-        </div>
-        <a href={SHIELD.url} target="_blank" rel="noopener" class="btn-primary">Conocer {SHIELD.nombre}</a>
       </article>
     </div>
   </section>

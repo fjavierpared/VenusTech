@@ -12,7 +12,7 @@ interface Props {
 }
 const { titulo } = Astro.props;
 const { n: nuevos } = db.prepare("SELECT COUNT(*) n FROM mensajes WHERE estado = 'nuevo'").get() as { n: number };
-// Clientes VPN que vencen en 7 días o ya vencieron (y no están suspendidos)
+// Usuarios de la VPN cuyo acceso vence en 7 días o ya venció (y no están suspendidos)
 const { n: vpnAlerta } = db
   .prepare('SELECT COUNT(*) n FROM vpn_clientes WHERE suspendido = 0 AND vence_en IS NOT NULL AND vence_en <= ?')
   .get(Date.now() + 7 * 86_400_000) as { n: number };
@@ -25,7 +25,7 @@ const nav: { href: string; label: string; icon: IconName; badge?: number }[] = [
   { href: '/admin/publicaciones', label: 'Publicaciones', icon: 'file-text' },
   { href: '/admin/medios', label: 'Imágenes y videos', icon: 'layers' },
   { href: '/admin/instagram', label: 'Instagram', icon: 'instagram' },
-  { href: '/admin/vpn', label: 'CRM VPN', icon: 'shield-check', badge: vpnAlerta },
+  { href: '/admin/vpn', label: 'VPN privada', icon: 'shield-check', badge: vpnAlerta },
 ];
 const activo = (href: string) => (href === '/admin' ? path === '/admin' : path.startsWith(href));
 ---

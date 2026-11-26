@@ -1,4 +1,5 @@
-// CRM VPN: clientes de VenusTech Shield, pagos, vencimientos y acceso desde la app.
+// VPN privada (VenusTech Shield): usuarios, duración del acceso y acceso desde la app.
+// Uso interno: sin planes ni cobros. vence_en = null significa acceso sin vencimiento.
 import { createHash, randomBytes, randomInt } from 'node:crypto';
 import { db } from './db';
 import { hashPassword, verificarPassword, bloqueadoPorIntentos, registrarIntentoFallido } from './auth';
@@ -7,11 +8,20 @@ import * as wg from './wgeasy';
 const DIA = 24 * 60 * 60 * 1000;
 export const DIAS_AVISO = 7; // "por vencer" cuando faltan 7 días o menos
 export const SERVIDOR_ETIQUETA = 'Europa · Servidor VenusTech';
-export const METODOS = ['Binance', 'AirTM', 'Efectivo', 'Transferencia', 'Cortesía'] as const;
+
+// Instaladores de VenusTech Shield (se publican en vpn.venustechfp.com/descargas).
+// Al sacar una versión nueva: copiar los archivos allí y cambiar APP_VERSION.
+export const APP_VERSION = '0.2.0';
+const DESCARGAS = 'https://vpn.venustechfp.com/descargas';
+export const APPS = {
+  android: { nombre: 'Android', detalle: 'Android 8 o superior', url: `${DESCARGAS}/VenusTechShield-${APP_VERSION}.apk` },
+  windows: { nombre: 'Windows', detalle: 'Windows 10 y 11 (64 bits)', url: `${DESCARGAS}/VenusTechShield-${APP_VERSION}-Windows.exe` },
+} as const;
 
 // ---------- IPs y acceso al VPS ----------
 // Red del VPN: 10.8.0.0/16. Las IPs 10.8.255.1–10.8.255.30 (10.8.255.0/27) son las únicas
-// que el firewall del VPN (hooks de wg-easy, cadena VT_GUARD) deja llegar al SSH del VPS.
+// que el firewall del VPN (hooks de wg-easy, cadena VT_GUARD) deja llegar a TODO el VPS
+// (SSH, paneles, panel de wg-easy, redes Docker, Tailscale). El resto: solo internet y webs 80/443.
 // Están al final a propósito: wg-easy reparte desde la más baja, así que un dispositivo
 // creado fuera del CRM nunca recibe acceso al VPS por accidente.
 export const VPS_IPS = { prefijo: '10.8.255.', desde: 1, hasta: 30 } as const;
@@ -77,7 +87,7 @@ async function ubicarDispositivo(d: Pick<Dispositivo, 'id' | 'wg_id'>, vps: bool
   return ip;
 }
 
-/** Da o quita a un cliente el acceso por SSH al VPS para todos sus dispositivos. */
+/** Da o quita a un usuario el acceso completo al VPS para todos sus dispositivos. */
 export async function cambiarAccesoVps(clienteId: number, activar: boolean) {
   const c = cliente(clienteId);
   if (!c) throw new Error('Cliente no encontrado.');
@@ -94,15 +104,6 @@ export async function cambiarAccesoVps(clienteId: number, activar: boolean) {
   for (const d of lista) await ubicarDispositivo(d, activar, usadas);
 }
 
-export interface Plan {
-  id: number;
-  nombre: string;
-  dias: number;
-  precio: number;
-  activo: number;
-  orden: number;
-}
-
 export interface Cliente {
   id: number;
   nombre: string;
@@ -114,23 +115,9 @@ export interface Cliente {
   plan: string | null;
   vence_en: number | null;
   suspendido: number;
-  /** 1 = sus dispositivos pueden entrar por SSH al VPS */
+  /** 1 = sus dispositivos pueden entrar a todo el VPS */
   acceso_vps: number;
   ultimo_acceso: number | null;
-  creado_en: number;
-}
-
-export interface Pago {
-  id: number;
-  cliente_id: number;
-  plan: string;
-  dias: number;
-  monto: number;
-  metodo: string;
-  referencia: string | null;
-  notas: string | null;
-  desde: number;
-  hasta: number;
   creado_en: number;
 }
 
@@ -145,25 +132,25 @@ export interface Dispositivo {
   ultimo_acceso: number | null;
 }
 
-export type Estado = 'activo' | 'por_vencer' | 'vencido' | 'suspendido' | 'sin_plan';
+export type Estado = 'activo' | 'por_vencer' | 'vencido' | 'suspendido';
 
 export const ESTADOS: Record<Estado, { texto: string; clase: string }> = {
   activo: { texto: 'Activo', clase: 'bg-emerald-100 text-emerald-800' },
   por_vencer: { texto: 'Por vencer', clase: 'bg-amber-100 text-amber-800' },
   vencido: { texto: 'Vencido', clase: 'bg-red-100 text-red-700' },
   suspendido: { texto: 'Suspendido', clase: 'bg-slate-200 text-slate-700' },
-  sin_plan: { texto: 'Sin plan', clase: 'bg-slate-100 text-slate-600' },
 };
 
 export function estadoDe(c: Pick<Cliente, 'suspendido' | 'vence_en'>, ahora = Date.now()): Estado {
   if (c.suspendido) return 'suspendido';
-  if (!c.vence_en) return 'sin_plan';
+  if (!c.vence_en) return 'activo'; // sin vencimiento
   if (c.vence_en <= ahora) return 'vencido';
   if (c.vence_en - ahora <= DIAS_AVISO * DIA) return 'por_vencer';
   return 'activo';
 }
 
-export const tieneAcceso = (c: Pick<Cliente, 'suspendido' | 'vence_en'>) => !c.suspendido && !!c.vence_en && c.vence_en > Date.now();
+export const tieneAcceso = (c: Pick<Cliente, 'suspendido' | 'vence_en'>) =>
+  !c.suspendido && (c.vence_en === null || c.vence_en > Date.now());
 
 // ---------- Utilidades ----------
 
@@ -185,58 +172,24 @@ export function waNumero(tel: string | null | undefined) {
 export const fechaCorta = (ts: number | null) =>
   ts ? new Intl.DateTimeFormat('es-VE', { day: 'numeric', month: 'short', year: 'numeric' }).format(ts) : '—';
 
-export const dinero = (n: number) => `$${n % 1 === 0 ? n.toFixed(0) : n.toFixed(2)}`;
 
 const sha256 = (s: string) => createHash('sha256').update(s).digest('hex');
 const correoValido = (c: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c);
 
-// ---------- Planes ----------
-
-export const planes = (soloActivos = true) =>
-  db.prepare(`SELECT * FROM vpn_planes ${soloActivos ? 'WHERE activo = 1' : ''} ORDER BY orden, id`).all() as unknown as Plan[];
-
-export function guardarPlan(p: { id?: number; nombre: string; dias: number; precio: number; activo: boolean }) {
-  if (!p.nombre.trim() || !(p.dias > 0) || !(p.precio >= 0)) throw new Error('Revisa el nombre, los días y el precio del plan.');
-  if (p.id) {
-    db.prepare('UPDATE vpn_planes SET nombre = ?, dias = ?, precio = ?, activo = ? WHERE id = ?').run(
-      p.nombre.trim(), p.dias, p.precio, p.activo ? 1 : 0, p.id,
-    );
-  } else {
-    const { m } = db.prepare('SELECT COALESCE(MAX(orden), 0) m FROM vpn_planes').get() as { m: number };
-    db.prepare('INSERT INTO vpn_planes (nombre, dias, precio, activo, orden) VALUES (?, ?, ?, ?, ?)').run(
-      p.nombre.trim(), p.dias, p.precio, p.activo ? 1 : 0, m + 1,
-    );
-  }
-}
-
-// ---------- Clientes ----------
+// ---------- Usuarios ----------
 
 export const cliente = (id: number) => db.prepare('SELECT * FROM vpn_clientes WHERE id = ?').get(id) as unknown as Cliente | undefined;
 export const dispositivos = (clienteId: number) =>
   db.prepare('SELECT * FROM vpn_dispositivos WHERE cliente_id = ? ORDER BY creado_en').all(clienteId) as unknown as Dispositivo[];
-export const pagosDe = (clienteId: number) =>
-  db.prepare('SELECT * FROM vpn_pagos WHERE cliente_id = ? ORDER BY creado_en DESC').all(clienteId) as unknown as Pago[];
 
-export interface DatosPago {
-  /** id de plan, o 'cortesia' para acceso gratis */
-  plan: number | 'cortesia';
-  diasCortesia?: number;
-  monto?: number;
-  metodo: string;
-  referencia?: string;
-  notas?: string;
-}
+/** Etiqueta que ve el usuario en la app según la duración del acceso. */
+const etiquetaAcceso = (venceEn: number | null) => (venceEn === null ? 'Sin vencimiento' : 'Temporal');
 
-function resolverPago(d: DatosPago) {
-  if (d.plan === 'cortesia') {
-    const dias = Math.round(Number(d.diasCortesia));
-    if (!(dias > 0 && dias <= 3650)) throw new Error('Indica cuántos días de cortesía (1 a 3650).');
-    return { nombre: 'Cortesía', dias, monto: 0, metodo: 'Cortesía' };
-  }
-  const p = db.prepare('SELECT * FROM vpn_planes WHERE id = ?').get(d.plan) as unknown as Plan | undefined;
-  if (!p) throw new Error('El plan elegido no existe.');
-  const monto = d.monto !== undefined && Number.isFinite(d.monto) ? d.monto : p.precio;
-  return { nombre: p.nombre, dias: p.dias, monto, metodo: d.metodo || 'Binance' };
+function venceDesdeDias(dias: number | null): number | null {
+  if (dias === null) return null;
+  const n = Math.round(Number(dias));
+  if (!(n >= 1 && n <= 3650)) throw new Error('Indica cuántos días de acceso (1 a 3650) o elige "Sin vencimiento".');
+  return Date.now() + n * DIA;
 }
 
 export async function crearCliente(datos: {
@@ -246,77 +199,46 @@ export async function crearCliente(datos: {
   notas?: string;
   maxDispositivos?: number;
   accesoVps?: boolean;
-  pago: DatosPago;
+  /** null = sin vencimiento */
+  dias: number | null;
 }): Promise<{ id: number; clave: string }> {
   const nombre = datos.nombre.trim();
   const correo = datos.correo.trim().toLowerCase();
-  if (!nombre) throw new Error('Escribe el nombre del cliente.');
+  if (!nombre) throw new Error('Escribe el nombre.');
   if (!correoValido(correo)) throw new Error('El correo no es válido.');
-  if (db.prepare('SELECT 1 FROM vpn_clientes WHERE correo = ?').get(correo)) throw new Error('Ya existe un cliente con ese correo.');
-  const pago = resolverPago(datos.pago); // valida antes de crear nada
+  if (db.prepare('SELECT 1 FROM vpn_clientes WHERE correo = ?').get(correo)) throw new Error('Ya existe un usuario con ese correo.');
+  const vence = venceDesdeDias(datos.dias); // valida antes de crear nada
 
   const clave = generarClave();
-  const ahora = Date.now();
   const r = db
     .prepare(
-      'INSERT INTO vpn_clientes (nombre, correo, whatsapp, notas, hash, max_dispositivos, acceso_vps, creado_en) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO vpn_clientes (nombre, correo, whatsapp, notas, hash, max_dispositivos, acceso_vps, plan, vence_en, creado_en) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
     )
     .run(
       nombre, correo, datos.whatsapp?.trim() || null, datos.notas?.trim() || null, hashPassword(clave),
-      datos.maxDispositivos ?? 2, datos.accesoVps ? 1 : 0, ahora,
+      datos.maxDispositivos ?? 2, datos.accesoVps ? 1 : 0, etiquetaAcceso(vence), vence, Date.now(),
     );
-  const id = Number(r.lastInsertRowid);
-  await registrarPago(id, datos.pago, pago);
-  return { id, clave };
+  return { id: Number(r.lastInsertRowid), clave };
+}
+
+/** Cambia la duración del acceso: null = sin vencimiento, o N días desde hoy. */
+export async function fijarAcceso(clienteId: number, dias: number | null) {
+  if (!cliente(clienteId)) throw new Error('Usuario no encontrado.');
+  const vence = venceDesdeDias(dias);
+  db.prepare('UPDATE vpn_clientes SET vence_en = ?, plan = ? WHERE id = ?').run(vence, etiquetaAcceso(vence), clienteId);
+  await sincronizar(clienteId);
 }
 
 export function editarCliente(id: number, d: { nombre: string; correo: string; whatsapp?: string; notas?: string; maxDispositivos: number }) {
   const correo = d.correo.trim().toLowerCase();
-  if (!d.nombre.trim()) throw new Error('Escribe el nombre del cliente.');
+  if (!d.nombre.trim()) throw new Error('Escribe el nombre.');
   if (!correoValido(correo)) throw new Error('El correo no es válido.');
   const otro = db.prepare('SELECT id FROM vpn_clientes WHERE correo = ? AND id != ?').get(correo, id);
-  if (otro) throw new Error('Ese correo ya lo usa otro cliente.');
+  if (otro) throw new Error('Ese correo ya lo usa otro usuario.');
   if (!(d.maxDispositivos >= 1 && d.maxDispositivos <= 10)) throw new Error('Dispositivos: entre 1 y 10.');
   db.prepare('UPDATE vpn_clientes SET nombre = ?, correo = ?, whatsapp = ?, notas = ?, max_dispositivos = ? WHERE id = ?').run(
     d.nombre.trim(), correo, d.whatsapp?.trim() || null, d.notas?.trim() || null, d.maxDispositivos, id,
   );
-}
-
-/** Registra un pago (o cortesía) y extiende el vencimiento desde hoy o desde la fecha en que vencía. */
-export async function registrarPago(clienteId: number, datos: DatosPago, yaResuelto?: ReturnType<typeof resolverPago>) {
-  const c = cliente(clienteId);
-  if (!c) throw new Error('Cliente no encontrado.');
-  const p = yaResuelto ?? resolverPago(datos);
-  const ahora = Date.now();
-  const desde = c.vence_en && c.vence_en > ahora ? c.vence_en : ahora;
-  const hasta = desde + p.dias * DIA;
-  db.exec('BEGIN');
-  try {
-    db.prepare(
-      'INSERT INTO vpn_pagos (cliente_id, plan, dias, monto, metodo, referencia, notas, desde, hasta, creado_en) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-    ).run(clienteId, p.nombre, p.dias, p.monto, p.metodo, datos.referencia?.trim() || null, datos.notas?.trim() || null, desde, hasta, ahora);
-    db.prepare('UPDATE vpn_clientes SET vence_en = ?, plan = ? WHERE id = ?').run(hasta, p.nombre, clienteId);
-    db.exec('COMMIT');
-  } catch (e) {
-    db.exec('ROLLBACK');
-    throw e;
-  }
-  await sincronizar(clienteId);
-}
-
-/** Anula un pago registrado por error y recalcula el vencimiento. */
-export async function anularPago(pagoId: number) {
-  const p = db.prepare('SELECT * FROM vpn_pagos WHERE id = ?').get(pagoId) as unknown as Pago | undefined;
-  if (!p) return;
-  db.prepare('DELETE FROM vpn_pagos WHERE id = ?').run(pagoId);
-  const c = cliente(p.cliente_id)!;
-  // El vencimiento se reduce en los días de ese pago (sin bajar de la fecha del pago anterior)
-  const nuevo = c.vence_en ? c.vence_en - p.dias * DIA : null;
-  const ultimo = db.prepare('SELECT plan FROM vpn_pagos WHERE cliente_id = ? ORDER BY creado_en DESC LIMIT 1').get(p.cliente_id) as
-    | { plan: string }
-    | undefined;
-  db.prepare('UPDATE vpn_clientes SET vence_en = ?, plan = ? WHERE id = ?').run(ultimo ? nuevo : null, ultimo?.plan ?? null, p.cliente_id);
-  await sincronizar(p.cliente_id);
 }
 
 /** Aplica en el servidor VPN el estado del cliente (activo/suspendido y fecha de vencimiento). */
@@ -359,15 +281,17 @@ export async function borrarCliente(clienteId: number) {
 
 export function mensajeBienvenida(c: Cliente, clave: string) {
   return [
-    `Hola ${c.nombre.split(' ')[0]}, ¡bienvenido a VenusTech Shield! 🛡️`,
+    `Hola ${c.nombre.split(' ')[0]}, ya tienes acceso a VenusTech Shield 🛡️`,
     '',
-    '1) Descarga la app: https://vpn.venustechfp.com/#app',
+    '1) Instala la app:',
+    `   Android: ${APPS.android.url}`,
+    `   Windows: ${APPS.windows.url}`,
     '2) Entra con estos datos:',
     `Usuario: ${c.correo}`,
     `Contraseña: ${clave}`,
     '',
-    `Tu plan ${c.plan ?? ''} vence el ${fechaCorta(c.vence_en)}. Puedes usarlo en ${c.max_dispositivos} dispositivos.`,
-    'Cualquier duda, escríbeme por aquí.',
+    c.vence_en ? `Tu acceso vence el ${fechaCorta(c.vence_en)}.` : 'Tu acceso no vence.',
+    `Puedes usarlo en ${c.max_dispositivos} dispositivos. No compartas estos datos.`,
   ].join('\n');
 }
 
@@ -377,22 +301,6 @@ export function mensajeClaveNueva(c: Cliente, clave: string) {
     `Usuario: ${c.correo}`,
     `Contraseña: ${clave}`,
   ].join('\n');
-}
-
-export function mensajeRecordatorio(c: Cliente) {
-  const vencido = !!c.vence_en && c.vence_en <= Date.now();
-  const precios = planes()
-    .map((p) => `${p.nombre} ${dinero(p.precio)}`)
-    .join(' · ');
-  return [
-    `Hola ${c.nombre.split(' ')[0]}, ${vencido ? 'tu VPN VenusTech Shield venció' : 'tu VPN VenusTech Shield vence'} el ${fechaCorta(c.vence_en)}.`,
-    `Para renovar: ${precios}. Aceptamos Binance y AirTM.`,
-    'Envíame el comprobante por aquí y te activo al momento.',
-  ].join('\n');
-}
-
-export function mensajePagoRecibido(c: Cliente) {
-  return `Hola ${c.nombre.split(' ')[0]}, recibí tu pago. ✅ Tu VenusTech Shield queda activo hasta el ${fechaCorta(c.vence_en)}. ¡Gracias!`;
 }
 
 export const enlaceWa = (tel: string | null, texto: string) => {
@@ -500,19 +408,4 @@ export async function cuentaApp(token: string | null) {
 
 export function logoutApp(token: string | null) {
   if (token) db.prepare('DELETE FROM vpn_sesiones WHERE token_hash = ?').run(sha256(token));
-}
-
-// ---------- Resumen para el panel ----------
-
-export function resumen() {
-  const ahora = Date.now();
-  const todos = db.prepare('SELECT * FROM vpn_clientes').all() as unknown as Cliente[];
-  const conteo: Record<Estado, number> = { activo: 0, por_vencer: 0, vencido: 0, suspendido: 0, sin_plan: 0 };
-  for (const c of todos) conteo[estadoDe(c, ahora)]++;
-  const inicioMes = new Date(new Date(ahora).getFullYear(), new Date(ahora).getMonth(), 1).getTime();
-  const { mes } = db.prepare('SELECT COALESCE(SUM(monto), 0) mes FROM vpn_pagos WHERE creado_en >= ?').get(inicioMes) as { mes: number };
-  const porVencer = db
-    .prepare('SELECT * FROM vpn_clientes WHERE suspendido = 0 AND vence_en IS NOT NULL AND vence_en <= ? ORDER BY vence_en')
-    .all(ahora + DIAS_AVISO * DIA) as unknown as Cliente[];
-  return { total: todos.length, conteo, ingresosMes: mes, porVencer };
 }

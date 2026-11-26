@@ -2,20 +2,18 @@
 import AdminLayout from '../../../../layouts/AdminLayout.astro';
 import VpnNav from '../../../../components/admin/VpnNav.astro';
 import VpnCredenciales from '../../../../components/admin/VpnCredenciales.astro';
-import { planes, crearCliente, cliente, METODOS, dinero, enlaceWa, mensajeBienvenida, ipsVpsLibres, VPS_RANGO_TEXTO, type DatosPago } from '../../../../lib/vpn';
+import { crearCliente, cliente, enlaceWa, mensajeBienvenida, ipsVpsLibres, VPS_RANGO_TEXTO } from '../../../../lib/vpn';
 
 export const prerender = false;
 
-const lista = planes();
 const campo = 'mt-1.5 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-navy-700';
 let error = '';
 let creado: { id: number; clave: string } | null = null;
-let v: Record<string, string> = { plan: String(lista[0]?.id ?? 'cortesia'), metodo: 'Binance', dias: '3', dispositivos: '2' };
+let v: Record<string, string> = { duracion: 'siempre', dias: '30', dispositivos: '2' };
 
 if (Astro.request.method === 'POST') {
   const f = await Astro.request.formData();
   v = Object.fromEntries([...f.entries()].map(([k, x]) => [k, String(x)]));
-  const plan: DatosPago['plan'] = v.plan === 'cortesia' ? 'cortesia' : Number(v.plan);
   try {
     creado = await crearCliente({
       nombre: v.nombre ?? '',
@@ -24,13 +22,7 @@ if (Astro.request.method === 'POST') {
       notas: v.notas,
       maxDispositivos: Number(v.dispositivos) || 2,
       accesoVps: v.acceso_vps === '1',
-      pago: {
-        plan,
-        diasCortesia: Number(v.dias),
-        monto: v.monto ? Number(v.monto.replace(',', '.')) : undefined,
-        metodo: plan === 'cortesia' ? 'Cortesía' : v.metodo,
-        referencia: v.referencia,
-      },
+      dias: v.duracion === 'dias' ? Number(v.dias) : null,
     });
   } catch (e) {
     error = e instanceof Error ? e.message : String(e);
@@ -40,21 +32,21 @@ const c = creado ? cliente(creado.id) : null;
 const libresVps = c ? null : await ipsVpsLibres();
 ---
 
-<AdminLayout titulo="Nuevo cliente VPN">
+<AdminLayout titulo="Nuevo usuario de la VPN">
   <VpnNav />
 
   {
     c && creado ? (
       <>
         <VpnCredenciales
-          titulo={`✅ ${c.nombre} quedó activo hasta el ${new Intl.DateTimeFormat('es-VE', { dateStyle: 'long' }).format(c.vence_en!)}`}
+          titulo={`✅ ${c.nombre} ya tiene acceso${c.vence_en ? ` hasta el ${new Intl.DateTimeFormat('es-VE', { dateStyle: 'long' }).format(c.vence_en)}` : ' (sin vencimiento)'}`}
           correo={c.correo}
           clave={creado.clave}
           wa={enlaceWa(c.whatsapp, mensajeBienvenida(c, creado.clave))}
           mensaje={mensajeBienvenida(c, creado.clave)}
         />
         <div class="flex flex-wrap gap-3">
-          <a href={`/admin/vpn/clientes/${c.id}`} class="rounded-full bg-navy-900 px-4 py-2 text-sm font-semibold text-white">Ver ficha del cliente</a>
+          <a href={`/admin/vpn/clientes/${c.id}`} class="rounded-full bg-navy-900 px-4 py-2 text-sm font-semibold text-white">Ver ficha</a>
           <a href="/admin/vpn/clientes/nuevo" class="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm">Crear otro</a>
         </div>
       </>
@@ -63,7 +55,7 @@ const libresVps = c ? null : await ipsVpsLibres();
         {error && <p class="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</p>}
 
         <section class="rounded-2xl border border-slate-200 bg-white p-5">
-          <h2 class="font-semibold text-navy-900">Datos del cliente</h2>
+          <h2 class="font-semibold text-navy-900">Datos</h2>
           <div class="mt-4 grid gap-4 sm:grid-cols-2">
             <label class="text-sm font-medium text-navy-900">
               Nombre y apellido
@@ -74,7 +66,7 @@ const libresVps = c ? null : await ipsVpsLibres();
               <input id="correo" name="correo" type="email" required value={v.correo} class={campo} autocomplete="off" />
             </label>
             <label class="text-sm font-medium text-navy-900">
-              WhatsApp
+              WhatsApp (opcional)
               <input id="whatsapp" name="whatsapp" value={v.whatsapp} placeholder="0414-1234567" class={campo} inputmode="tel" />
             </label>
             <label class="text-sm font-medium text-navy-900">
@@ -85,82 +77,48 @@ const libresVps = c ? null : await ipsVpsLibres();
               Notas (opcional)
               <textarea id="notas" name="notas" rows="2" class={campo}>{v.notas}</textarea>
             </label>
-            <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-300 p-3 text-sm sm:col-span-2 has-[:checked]:border-amber-400 has-[:checked]:bg-amber-50">
-              <input id="acceso_vps" type="checkbox" name="acceso_vps" value="1" checked={v.acceso_vps === '1'} class="mt-0.5 size-4 accent-amber-600" />
-              <span>
-                <span class="block font-semibold text-navy-900">Acceso al VPS (SSH)</span>
-                <span class="block text-gris">
-                  Solo para ti o personal de confianza. Sus dispositivos reciben una IP fija del grupo {VPS_RANGO_TEXTO}, la única
-                  que el firewall deja entrar al SSH del VPS (igual pide tu clave o llave).
-                  {libresVps !== null && <> Quedan <strong>{libresVps}</strong> IPs libres.</>}
-                </span>
-              </span>
-            </label>
           </div>
         </section>
 
         <section class="rounded-2xl border border-slate-200 bg-white p-5">
-          <h2 class="font-semibold text-navy-900">Plan y pago</h2>
-          <fieldset class="mt-4 grid gap-3 sm:grid-cols-3">
-            <legend class="sr-only">Plan</legend>
-            {lista.map((p) => (
-              <label class="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-300 p-3 has-[:checked]:border-naranja has-[:checked]:bg-crema">
-                <input type="radio" name="plan" value={p.id} checked={v.plan === String(p.id)} class="accent-naranja" data-precio={p.precio} />
-                <span>
-                  <span class="block font-semibold text-navy-900">{p.nombre}</span>
-                  <span class="text-sm text-gris">{dinero(p.precio)} · {p.dias} días</span>
-                </span>
-              </label>
-            ))}
+          <h2 class="font-semibold text-navy-900">Acceso</h2>
+          <fieldset class="mt-4 grid gap-3 sm:grid-cols-2">
+            <legend class="sr-only">Duración del acceso</legend>
             <label class="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-300 p-3 has-[:checked]:border-naranja has-[:checked]:bg-crema">
-              <input type="radio" name="plan" value="cortesia" checked={v.plan === 'cortesia'} class="accent-naranja" />
+              <input type="radio" name="duracion" value="siempre" checked={v.duracion !== 'dias'} class="accent-naranja" />
               <span>
-                <span class="block font-semibold text-navy-900">Gratis / prueba</span>
-                <span class="text-sm text-gris">Tú eliges los días</span>
+                <span class="block font-semibold text-navy-900">Sin vencimiento</span>
+                <span class="text-sm text-gris">Hasta que lo suspendas o lo borres</span>
+              </span>
+            </label>
+            <label class="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-300 p-3 has-[:checked]:border-naranja has-[:checked]:bg-crema">
+              <input type="radio" name="duracion" value="dias" checked={v.duracion === 'dias'} class="accent-naranja" />
+              <span class="flex flex-wrap items-center gap-2">
+                <span class="font-semibold text-navy-900">Por</span>
+                <input id="dias" name="dias" type="number" min="1" max="3650" value={v.dias} aria-label="Días de acceso" class="w-20 rounded-lg border border-slate-300 px-2 py-1 text-sm" />
+                <span class="font-semibold text-navy-900">días</span>
               </span>
             </label>
           </fieldset>
 
-          <div class="mt-4 grid gap-4 sm:grid-cols-3" id="datos-pago">
-            <label class="text-sm font-medium text-navy-900" data-solo="pago">
-              Método
-              <select id="metodo" name="metodo" class={campo}>
-                {METODOS.filter((m) => m !== 'Cortesía').map((m) => <option selected={v.metodo === m}>{m}</option>)}
-              </select>
-            </label>
-            <label class="text-sm font-medium text-navy-900" data-solo="pago">
-              Monto recibido ($)
-              <input id="monto" name="monto" inputmode="decimal" value={v.monto} placeholder="Precio del plan" class={campo} />
-            </label>
-            <label class="text-sm font-medium text-navy-900" data-solo="pago">
-              Referencia
-              <input id="referencia" name="referencia" value={v.referencia} placeholder="Nº de orden o captura" class={campo} />
-            </label>
-            <label class="text-sm font-medium text-navy-900" data-solo="cortesia">
-              Días gratis
-              <input id="dias" name="dias" type="number" min="1" max="3650" value={v.dias} class={campo} />
-            </label>
-          </div>
+          <label class="mt-4 flex cursor-pointer items-start gap-3 rounded-xl border border-slate-300 p-3 text-sm has-[:checked]:border-amber-400 has-[:checked]:bg-amber-50">
+            <input id="acceso_vps" type="checkbox" name="acceso_vps" value="1" checked={v.acceso_vps === '1'} class="mt-0.5 size-4 accent-amber-600" />
+            <span>
+              <span class="block font-semibold text-navy-900">Acceso a todo el VPS</span>
+              <span class="block text-gris">
+                Solo para ti o personal de confianza: SSH, Portainer, Uptime Kuma, panel de wg-easy y redes internas. Sus
+                dispositivos reciben una IP fija del grupo {VPS_RANGO_TEXTO}. Sin esta opción solo navega por internet.
+                {libresVps !== null && <> Quedan <strong>{libresVps}</strong> IPs libres.</>}
+              </span>
+            </span>
+          </label>
         </section>
 
         <div>
-          <button class="rounded-full bg-naranja px-6 py-3 font-semibold text-white hover:bg-naranja-600">Crear cliente y generar acceso</button>
+          <button class="rounded-full bg-naranja px-6 py-3 font-semibold text-white hover:bg-naranja-600">Crear usuario y generar acceso</button>
           <p class="mt-2 text-sm text-gris">Se genera una contraseña y verás el botón para enviarle sus datos por WhatsApp.</p>
         </div>
       </form>
     )
   }
 </AdminLayout>
-
-<script>
-  // Muestra los campos de pago o los de cortesía según el plan elegido
-  const radios = document.querySelectorAll<HTMLInputElement>('input[name="plan"]');
-  const aplicar = () => {
-    const cortesia = document.querySelector<HTMLInputElement>('input[name="plan"]:checked')?.value === 'cortesia';
-    document.querySelectorAll<HTMLElement>('[data-solo]').forEach((el) => {
-      el.hidden = (el.dataset.solo === 'cortesia') !== cortesia;
-    });
-  };
-  radios.forEach((r) => r.addEventListener('change', aplicar));
-  aplicar();
-</script>
